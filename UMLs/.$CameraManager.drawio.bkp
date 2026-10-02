@@ -1,0 +1,25 @@
+<mxfile host="Electron">
+  <diagram name="Page-1" id="MtT0QFkq_h-wdxj3WXDV">
+    <mxGraphModel dx="1174" dy="691" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="eJE9RhTt7_L7AE1gFr_v-1" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=29;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;" value="BP_CameraManager" vertex="1">
+          <mxGeometry height="170" width="190" x="344" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="eJE9RhTt7_L7AE1gFr_v-3" parent="eJE9RhTt7_L7AE1gFr_v-1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="RequestCameraSwap (CamereRef,&lt;div&gt;Priority,&lt;/div&gt;&lt;div&gt;)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;CameraLookAtForTime(Vector , Time)&lt;/div&gt;&lt;div&gt;UnlockCamera()&lt;/div&gt;" vertex="1">
+          <mxGeometry height="141" width="190" y="29" as="geometry" />
+        </mxCell>
+        <mxCell id="eJE9RhTt7_L7AE1gFr_v-4" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=29;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;" value="SignalBus" vertex="1">
+          <mxGeometry height="54" width="180" x="580" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="eJE9RhTt7_L7AE1gFr_v-5" parent="eJE9RhTt7_L7AE1gFr_v-4" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="OnCameraLookingAt(String)" vertex="1">
+          <mxGeometry height="25" width="180" y="29" as="geometry" />
+        </mxCell>
+        <mxCell id="eJE9RhTt7_L7AE1gFr_v-7" edge="1" parent="1" source="eJE9RhTt7_L7AE1gFr_v-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="eJE9RhTt7_L7AE1gFr_v-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

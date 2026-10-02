@@ -1,0 +1,82 @@
+<mxfile host="Electron">
+  <diagram name="Page-1" id="vyfDc9H6qwN0A-9dD00n">
+    <mxGraphModel dx="978" dy="576" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-6" edge="1" parent="1" source="RD7t2YR42tPCiHTF2J2Q-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-1" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=29;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;" value="CameraManager" vertex="1">
+          <mxGeometry height="90" width="140" x="230" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-3" parent="RD7t2YR42tPCiHTF2J2Q-1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="GetActiveLookVector -&amp;gt; Camera location CameraDir" vertex="1">
+          <mxGeometry height="61" width="140" y="29" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-5" parent="1" style="text;align=center;fontStyle=1;verticalAlign=middle;spacingLeft=3;spacingRight=3;strokeColor=none;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;" value="LineTrace" vertex="1">
+          <mxGeometry height="26" width="80" x="260" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-7" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=-0.039;entryDx=0;entryDy=0;entryPerimeter=0;" target="RD7t2YR42tPCiHTF2J2Q-9">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="299.76" y="376" as="sourcePoint" />
+            <mxPoint x="299.76" y="436" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-9" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=29;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;" value="SignalBus" vertex="1">
+          <mxGeometry height="80" width="220" x="190" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-11" parent="RD7t2YR42tPCiHTF2J2Q-9" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="OnCameraVectorChanged" vertex="1">
+          <mxGeometry height="51" width="220" y="29" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-25" edge="1" parent="1" source="RD7t2YR42tPCiHTF2J2Q-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RD7t2YR42tPCiHTF2J2Q-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-26" connectable="0" parent="RD7t2YR42tPCiHTF2J2Q-25" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="If Player Binds To" vertex="1">
+          <mxGeometry relative="1" x="-0.2079" y="-2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-29" edge="1" parent="1" source="RD7t2YR42tPCiHTF2J2Q-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RD7t2YR42tPCiHTF2J2Q-11">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="495" />
+              <mxPoint x="480" y="495" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-12" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=29;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;" value="BP_Part_Weapon" vertex="1">
+          <mxGeometry height="100" width="200" x="510" y="444.5" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-13" parent="RD7t2YR42tPCiHTF2J2Q-12" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="HandleOnCameraVectorChanged" vertex="1">
+          <mxGeometry height="41" width="200" y="29" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-17" parent="RD7t2YR42tPCiHTF2J2Q-12" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="Attack()" vertex="1">
+          <mxGeometry height="30" width="200" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-15" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=29;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;" value="PlayerController" vertex="1">
+          <mxGeometry height="90" width="140" x="730" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-16" parent="RD7t2YR42tPCiHTF2J2Q-15" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="OnAttackPressed()" vertex="1">
+          <mxGeometry height="61" width="140" y="29" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-27" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=29;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;" value="AI_Controller" vertex="1">
+          <mxGeometry height="90" width="150" x="820" y="444.5" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-28" parent="RD7t2YR42tPCiHTF2J2Q-27" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;" value="OnAttackPressed()&lt;br&gt;OnTargetVectorChanged()" vertex="1">
+          <mxGeometry height="61" width="150" y="29" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-30" connectable="0" parent="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="If Player Binds To" vertex="1">
+          <mxGeometry x="460" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-31" connectable="0" parent="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="If AI Binds To" vertex="1">
+          <mxGeometry x="770" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="RD7t2YR42tPCiHTF2J2Q-32" edge="1" parent="1" source="RD7t2YR42tPCiHTF2J2Q-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.02;entryY=0.352;entryDx=0;entryDy=0;entryPerimeter=0;" target="RD7t2YR42tPCiHTF2J2Q-28">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
