@@ -7,7 +7,7 @@
 #include "Widgets/Input/SButton.h"
 #include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
-#include "RobotData/PartDat.h"
+#include "Data/PartDat.h"
 #include "IDetailsView.h"
 
 TSharedRef<SDockTab> SPartEditorTab::MakeTab(const FSpawnTabArgs& SpawnTabArgs) {

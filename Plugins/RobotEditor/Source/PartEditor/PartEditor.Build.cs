@@ -2,22 +2,22 @@
 
 using UnrealBuildTool;
 
-public class RobotEditor : ModuleRules
+public class PartEditor : ModuleRules
 {
-	public RobotEditor(ReadOnlyTargetRules Target) : base(Target)
+	public PartEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicIncludePaths.AddRange(
 			new string[] {
-                "RobotEditor/RobotEditor/Public",
+                "RobotEditor/PartEditor/Public",
 			}
 			);
 
 
 		PrivateIncludePaths.AddRange(
 			new string[] {
-                "RobotEditor/RobotEditor/Private",
+                "RobotEditor/PartEditor/Private",
 			}
 			);
 

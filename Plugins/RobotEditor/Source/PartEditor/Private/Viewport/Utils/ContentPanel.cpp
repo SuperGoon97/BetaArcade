@@ -11,7 +11,7 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Layout/SScrollBox.h"
-#include "RobotData/PartDat.h"
+#include "Data/PartDat.h"
 
 TWeakPtr<SPartContentBrowser> SPartContentBrowser::m_Instance = nullptr;
 

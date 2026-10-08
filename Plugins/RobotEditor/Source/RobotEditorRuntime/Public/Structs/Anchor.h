@@ -7,11 +7,11 @@ USTRUCT(BlueprintType)
 struct FAnchor {
 GENERATED_BODY()
 public:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anchor Data")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Anchor Data")
     FString AnchorName = TEXT("New Anchor");
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anchor Data")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Anchor Data")
     FVector Position;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Anchor Data")
+    UPROPERTY(BlueprintReadWrite, Category = "Anchor Data")
     bool bIsConnected;
 
     FAnchor()

@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "Meta/Structs/Tooltip.h"
-#include "Meta/Structs/WeaponTooltip.h"
-#include "Meta/Structs/Anchor.h"
+#include "Structs/Tooltip.h"
+#include "Structs/WeaponTooltip.h"
+#include "Structs/Anchor.h"
 #include "PartDat.generated.h"
 
 class UNiagaraSystem;
@@ -29,7 +29,7 @@ public:
     FTooltip Tooltip;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     FWeapon WeaponTooltip;
-    UPROPERTY(BlueprintReadOnly, Category = "Part Data")
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Part Data")
     TArray<FAnchor> Anchors;
 
 public:
