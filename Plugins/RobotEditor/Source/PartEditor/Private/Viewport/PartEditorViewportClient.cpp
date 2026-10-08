@@ -7,7 +7,7 @@
 #include "SceneManagement.h"
 #include "Viewport/Utils/ContentPanel.h"
 #include "DrawDebugHelpers.h"
-#include "RobotData/PartDat.h"
+#include "Data/PartDat.h"
 #include "MouseDeltaTracker.h"
 #include "Framework/Application/SlateApplication.h"
 #include "AssetRegistry/AssetRegistryModule.h"

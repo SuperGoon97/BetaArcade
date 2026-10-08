@@ -1,7 +1,7 @@
 #include "Viewport/Utils/AnchorsPanel.h"
 #include "Viewport/Tabs/PartEditorTab.h"
 #include "Viewport/PartEditorViewport.h"
-#include "RobotData/PartDat.h"
+#include "Data/PartDat.h"
 #include "Widgets/Views/SListView.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Input/SButton.h"
@@ -88,7 +88,7 @@ void SAnchorsPanel::RefreshAnchorList() {
             for (const FAnchor& Anchor : ActivePart->Anchors) {
                 m_ListDataSource.Add(MakeShareable(new FString(Anchor.AnchorName)));
             }
-        } 
+        }
     }
 
     if (m_ListViewWidget.IsValid()) {
