@@ -8,7 +8,6 @@ class FToolBarBuilder;
 class FMenuBuilder;
 
 static const FName RobotEditorTabName("RobotEditor");
-static const FName PartEditorTabName("PartEditor");
 static const FName EditorUnifiedWindowLayoutVer("EditorUnifiedLayout_v1.0");
 
 class FRobotEditorModule : public IModuleInterface {

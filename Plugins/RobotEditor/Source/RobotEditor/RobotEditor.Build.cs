@@ -10,17 +10,14 @@ public class RobotEditor : ModuleRules
 
 		PublicIncludePaths.AddRange(
 			new string[] {
-                "RobotEditor/Public",
-                "RobotEditor/Public/Viewport"
-				// ... add public include paths required here ...
+                "RobotEditor/RobotEditor/Public",
 			}
 			);
 
 
 		PrivateIncludePaths.AddRange(
 			new string[] {
-                "RobotEditor/Private",
-				"RobotEditor/Private/Viewport"
+                "RobotEditor/RobotEditor/Private",
 			}
 			);
 
@@ -51,7 +48,8 @@ public class RobotEditor : ModuleRules
                 "LevelEditor",
                 "ContentBrowser",
                 "PropertyEditor",
-                "InteractiveToolsFramework"
+                "InteractiveToolsFramework",
+                "RobotEditorRuntime"
 				// ... add private dependencies that you statically link with here ...
 			}
 			);

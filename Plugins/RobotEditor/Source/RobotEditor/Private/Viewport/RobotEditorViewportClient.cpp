@@ -1,5 +1,5 @@
 #include "Viewport/RobotEditorViewportClient.h"
-#include "RobotData/PartDat.h"
+#include "Data/PartDat.h"
 
 FRobotEditorViewportClient::FRobotEditorViewportClient(FPreviewScene& InPreviewScene)
     : FEditorViewportClient(nullptr, &InPreviewScene) {
