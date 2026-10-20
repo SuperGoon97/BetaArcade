@@ -5,6 +5,7 @@
 #include "AssetThumbnail.h"
 #include "Viewport/Utils/ContentPanel.h"
 #include "Viewport/PartEditorViewport.h"
+#include "Viewport/PartEditorViewportClient.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SWrapBox.h"
@@ -26,9 +27,21 @@ void SPartThumbnailTitle::Construct(const FArguments& InArgs, const FAssetData& 
         return;
     }
 
-    TSharedPtr<FAssetThumbnailPool> LocalThumbnailPool = MakeShareable(new FAssetThumbnailPool(1));
-    m_AssetThumbnailInstance = MakeShareable(new FAssetThumbnail(m_AssetDataRecord, 64, 64, LocalThumbnailPool));
+    TSharedPtr<FAssetThumbnailPool> GlobalPool = UThumbnailManager::Get().GetSharedThumbnailPool();
     TSharedRef<SWidget> ThumbnailWidget = SNew(STextBlock).Text(INVTEXT("Data"));
+
+    UObject* Outer = m_AssetDataRecord.GetAsset();
+    UPDAPart* OuterCast = Cast<UPDAPart>(Outer);
+
+    if (!OuterCast) return;
+
+    UObject* Inner = OuterCast->Object;
+
+    if (Inner) {
+        m_AssetThumbnailInstance = MakeShareable(new FAssetThumbnail(Inner, THUMBNAIL_SIZE, THUMBNAIL_SIZE, GlobalPool));
+    } else {
+        m_AssetThumbnailInstance = MakeShareable(new FAssetThumbnail(OuterCast, THUMBNAIL_SIZE, THUMBNAIL_SIZE, GlobalPool));
+    }
 
     if (m_AssetThumbnailInstance.IsValid()) {
         TSharedPtr<SWidget> NativeWidget = m_AssetThumbnailInstance->MakeThumbnailWidget();
@@ -165,15 +178,39 @@ void SPartContentBrowser::ScanPluginDirectory() {
                 .HAlign(HAlign_Center)
                 .VAlign(VAlign_Center)
                 .OnClicked_Lambda([WeakViewport]() -> FReply {
-                    if (WeakViewport.IsValid()) {
-                        TSharedPtr<SPartEditorViewport> ViewportPin = WeakViewport.Pin();
-                        if (ViewportPin.IsValid() && ViewportPin->GetPartClient().IsValid()) {
-                            UPDAPart* NewBlankPart = NewObject<UPDAPart>(GetTransientPackage(), UPDAPart::StaticClass());
-                            if (NewBlankPart) {
-                                ViewportPin->SetEditingObject(NewBlankPart);
-                            }
+                    TSharedPtr<SPartEditorViewport> ViewportPin = WeakViewport.Pin();
+                    if (!ViewportPin.IsValid()) return FReply::Handled();
+                    TSharedPtr<FPartEditorViewportClient> ViewportClient = ViewportPin->GetPartClient();
+                    if (!ViewportClient.IsValid()) return FReply::Handled();
+                    TObjectPtr<UPDAPart> CurrentEditedPart = Cast<UPDAPart>(ViewportClient->GetInspectedObject());
+                    bool bShouldShowDialog = false;
+                    if (CurrentEditedPart) {
+                        UPackage* AssetPackage = CurrentEditedPart->GetPackage();
+                        if (AssetPackage && AssetPackage->IsDirty()) {
+                            bShouldShowDialog = true;
                         }
                     }
+
+                    if (bShouldShowDialog) {
+                        FText DialogText = INVTEXT("You may have unsaved data, do you wish to create a new part?");
+                        FText DialogTitle = INVTEXT("Create new part");
+
+                        EAppReturnType::Type UserChoice = FMessageDialog::Open(
+                            EAppMsgType::YesNo,
+                            DialogText,
+                            DialogTitle
+                        );
+
+                        if (UserChoice != EAppReturnType::Yes){
+                                return FReply::Handled();
+                        }
+                    }
+
+                    UPDAPart* NewBlankPart = NewObject<UPDAPart>(GetTransientPackage(), UPDAPart::StaticClass());
+                    if (NewBlankPart) {
+                        ViewportPin->SetEditingObject(NewBlankPart);
+                    }
+
                     return FReply::Handled();
                 })
                 [
