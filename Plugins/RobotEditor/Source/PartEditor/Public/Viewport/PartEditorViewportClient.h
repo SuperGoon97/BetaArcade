@@ -5,12 +5,30 @@
 #include "IDetailsView.h"
 #include "PreviewScene.h"
 
+class UPDAPart;
+
+enum class EPartSelectionType : uint8 {
+    None,
+    Anchor,
+    CollisionPoint
+};
+
+/*
+These delegates are going to be used within our class to offload function calls to the delegate system. This should allow other set-ups to listen for what we're doing in the client as-well,
+such as the content browser, the anchors panel and the details view.
+*/
+
+DECLARE_MULTICAST_DELEGATE(FOnDeselection);
 DECLARE_MULTICAST_DELEGATE(FOnSelectedObjectChanged);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnSelectedObjectSaved, UPDAPart*);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnSelectedPointChanged, int, EPartSelectionType);
 
 class FPartEditorViewportClient : public FEditorViewportClient {
 public:
     FPartEditorViewportClient(FPreviewScene& InPreviewScene);
     virtual ~FPartEditorViewportClient() override;
+
+// Override base class functionality
 
     void SaveActiveAsset();
     virtual void Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI) override;
@@ -18,48 +36,79 @@ public:
     virtual bool InputAxis(const FInputKeyEventArgs& EventArgs) override;
     virtual void Tick(float DeltaSeconds) override;
 
+// External Setters
+
     void SetDetailsView(TSharedPtr<IDetailsView> InDetailsView);
-    TSharedPtr<IDetailsView> GetDetailsView() { return m_AssociatedDetailsView; }
     void SetInspectedObject(UObject* NewPartObject);
+    void SetPartSelectionType(EPartSelectionType Type) { m_SelectedType = Type; }
+    void SetSelectedIndex(int32 NewIndex) { m_SelectedIndex = NewIndex; }
+
+// External Getters
+
+    TSharedPtr<IDetailsView> GetDetailsView() { return m_AssociatedDetailsView; }
     TWeakObjectPtr<UObject> GetInspectedObject() { return m_CurrentInspectedObject; }
+    int32 GetSelectedIndex() const { return m_SelectedIndex; }
 
-    void SetSelectedAnchorIndex(int32 NewIndex) { m_SelectedAnchorIndex = NewIndex; }
-    int32 GetSelectedAnchorIndex() const { return m_SelectedAnchorIndex; }
+// Widgets
 
-    virtual bool CanSetWidgetMode(UE::Widget::EWidgetMode NewMode) const override { return true; }
     virtual UE::Widget::EWidgetMode GetWidgetMode() const override;
     virtual FVector GetWidgetLocation() const override;
+    virtual bool CanSetWidgetMode(UE::Widget::EWidgetMode NewMode) const override { return true; }
     virtual bool InputWidgetDelta(FViewport* InViewport, EAxisList::Type CurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale) override;
 
+// Alter our scene without using an FAdvancedPreviewScene
+
+    virtual FSceneView* CalcSceneView(FSceneViewFamily* ViewFamily, const int32 StereoViewIndex = INDEX_NONE) override;
+
+// Delegates
+
+    FOnDeselection OnDeslection;
     FOnSelectedObjectChanged OnSelectedObjectChanged;
+    FOnSelectedObjectSaved OnSelectedObjectSaved;
+    FOnSelectedPointChanged OnSelectedPointChanged;
 
 private:
+
     FVector m_OrbitTargetPoint;
     float m_CameraOrbitRadius;
-    bool m_bIsOrbiting;
+    bool m_bIsOrbiting = false;
+    bool m_bIsClickingGizmo = false;
+    bool m_bChangeBackgroundColour = false;
+    FLinearColor m_BackgroundColour = FLinearColor(0.12f, 0.14f, 0.18f, 1.0f);
+    bool m_bDrawAnchors = true;
+    bool m_bDrawCollision = true;
+    int32 m_SelectedIndex = -1;
+    EPartSelectionType m_SelectedType = EPartSelectionType::None;
 
     TSharedPtr<IDetailsView> m_AssociatedDetailsView;
     TWeakObjectPtr<UObject> m_CurrentInspectedObject;
     TWeakObjectPtr<AActor> m_SpawnedPreviewActor;
+    TUniquePtr<FScopedTransaction> m_ScopedDragTransaction;
 
     const FColor c_UnselectedAnchorColor = FColor(255, 255, 255);
     const FColor c_SelectedAnchorColor = FColor(0, 255, 64);
+    const FLinearColor c_CollisionPoint = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    const FLinearColor c_SelectedCollisionPoint = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    const FLinearColor c_BoundingBoxWire = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    const FLinearColor c_BoundingBoxInnards = FLinearColor(1.0f, 0.0f, 0.0f, 0.2f);
+    const int c_BoundingBoxWireThickness = 1;
     const float c_AnchorSize = 12.0f;
     const float c_SelectedAnchorSize = c_AnchorSize * 1.5;
-
-    int32 m_SelectedAnchorIndex = -1;
-
-    AStaticMeshActor* CreateStaticMeshComponent(UStaticMesh* InObject, FActorSpawnParameters& SpawnParams);
-    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
-    AActor* SpawnActorComponent(UObject* InObject, FActorSpawnParameters& SpawnParams);
-
-    void UpdateCameraPositionFromOrbit();
-    void ZoomCamera(float ZoomAmount);
-
+    const float c_GridSnap = 0.5f;
     const float c_MinZoom = 50.0f;
     const float c_MaxZoom = 5000.0f;
     const float c_ZoomAmount = 50.0f;
 
+private:
+
+    AStaticMeshActor* CreateStaticMeshComponent(UStaticMesh* InObject, FActorSpawnParameters& SpawnParams);
+    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
+    AActor* SpawnActorComponent(UObject* InObject, FActorSpawnParameters& SpawnParams);
+    void TrackingStarted(const FInputEventState& InInputState, bool bIsDraggingWidget, bool bNudge) override;
+    void TrackingStopped() override;
+    void UpdateCameraPositionFromOrbit();
+    void ZoomCamera(float ZoomAmount);
     void OnInspectorPropertyChanged(const FPropertyChangedEvent& PropertyChangedEvent);
+    void SaveNewAsset(UPDAPart* ActivePart, const FString& ChosenPackagePath, const FString& CurrentName);
 
 };
