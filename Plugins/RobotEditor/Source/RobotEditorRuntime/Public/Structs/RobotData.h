@@ -15,18 +15,18 @@ public:
     FTransform RelativeTransform;
 };
 
-UCLASS(BlueprintType, Blueprintable)
-class ROBOTEDITORRUNTIME_API UPartDataContainer : public UObject {
+USTRUCT(BlueprintType)
+struct FRobotData {
 GENERATED_BODY()
 public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Save Data")
-    FPartData PartData;
+    TArray<FPartData> Parts;
 };
 
 UCLASS(BlueprintType, Blueprintable)
 class ROBOTEDITORRUNTIME_API URobotDataContainer : public UObject {
 GENERATED_BODY()
 public:
-    UPROPERTY(BlueprintReadWrite, Instanced, EditAnywhere, Category = "Robot Data")
-    TArray<UPartDataContainer*> RobotParts;
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Robot Data")
+    FRobotData RobotParts;
 };
