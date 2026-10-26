@@ -57,6 +57,6 @@ public:
     FWeapon& GetWeaponData();
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Object")
-    TSubclassOf<UObject> GetObjectClass();
+    TSubclassOf<AActor> GetObjectClass();
 
 };
