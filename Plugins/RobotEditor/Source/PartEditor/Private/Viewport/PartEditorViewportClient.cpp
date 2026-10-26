@@ -4,7 +4,6 @@
 #include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PrimitiveComponent.h"
-#include "SceneManagement.h"
 #include "Viewport/Utils/ContentPanel.h"
 #include "DrawDebugHelpers.h"
 #include "Data/PartDat.h"
@@ -12,8 +11,6 @@
 #include "ScopedTransaction.h"
 #include "MaterialDomain.h"
 #include "Materials/MaterialRenderProxy.h"
-#include "MouseDeltaTracker.h"
-#include "Framework/Application/SlateApplication.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "FileHelpers.h"
@@ -22,49 +19,19 @@
 #include "UObject/Package.h"
 #include "Components/SkyLightComponent.h"
 #include "Engine/SkyLight.h"
-#include "Interfaces/IMainFrameModule.h"
 #include "UnrealWidget.h"
 
 #define LOCTEXT_NAMESPACE "PartEditor"
 
 FPartEditorViewportClient::FPartEditorViewportClient(FPreviewScene& InPreviewScene)
-    : FEditorViewportClient(nullptr, &InPreviewScene) {
-        bDrawAxes = true;
-        SetViewMode(VMI_Unlit);
-        SetViewportType(LVT_Perspective);
-        DrawHelper.bDrawGrid = true;
-
-        m_OrbitTargetPoint = FVector::ZeroVector;
-        m_CameraOrbitRadius = 50.0f;
-        m_bIsOrbiting = false;
-
-        SetViewRotation(FRotator(-30.0f, -45.0f, 0.0f));
-        UpdateCameraPositionFromOrbit();
-        EngineShowFlags.SetEyeAdaptation(false);
-        Invalidate();
-}
-
-FSceneView* FPartEditorViewportClient::CalcSceneView(FSceneViewFamily* ViewFamily, const int32 StereoViewIndex) {
-    FSceneView* View = FEditorViewportClient::CalcSceneView(ViewFamily, StereoViewIndex);
-    if (!m_bChangeBackgroundColour) return View;
-
-    if (View) {
-        View->BackgroundColor = m_BackgroundColour;
-    }
-
-    return View;
+    : FEditorUtilsViewportClient(InPreviewScene) {
+        return;
 }
 
 void FPartEditorViewportClient::SetDetailsView(TSharedPtr<IDetailsView> InDetailsView) {
-    m_AssociatedDetailsView = InDetailsView;
+    FEditorUtilsViewportClient::SetDetailsView(InDetailsView);
     if (m_AssociatedDetailsView.IsValid()) {
         m_AssociatedDetailsView->OnFinishedChangingProperties().AddRaw(this, &FPartEditorViewportClient::OnInspectorPropertyChanged);
-    }
-}
-
-FPartEditorViewportClient::~FPartEditorViewportClient() {
-    if (m_AssociatedDetailsView.IsValid()) {
-        m_AssociatedDetailsView->OnFinishedChangingProperties().RemoveAll(this);
     }
 }
 
@@ -72,11 +39,6 @@ void FPartEditorViewportClient::OnInspectorPropertyChanged(const FPropertyChange
     if (!m_CurrentInspectedObject.IsValid()) return;
     UObject* ActiveObject = m_CurrentInspectedObject.Get();
     SetInspectedObject(ActiveObject);
-}
-
-void FPartEditorViewportClient::Tick(float DeltaSeconds) {
-    FEditorViewportClient::Tick(DeltaSeconds);
-    PreviewScene->GetWorld()->Tick(LEVELTICK_All, DeltaSeconds);
 }
 
 bool FPartEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
@@ -100,34 +62,6 @@ bool FPartEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
         return true;
     }
 
-    /*
-    Handle zooming inputs, whether we should zoom - or + based on scroll inputs.
-    */
-    if (EventArgs.Key == EKeys::MouseScrollUp && EventArgs.Event == IE_Pressed) {
-        ZoomCamera(-c_ZoomAmount);
-        return true;
-    }
-    if (EventArgs.Key == EKeys::MouseScrollDown && EventArgs.Event == IE_Pressed) {
-        ZoomCamera(c_ZoomAmount);
-        return true;
-    }
-
-    /*
-    Handle orbit logic by locking our mouse to the viewport and toggling m_bIsOrbiting so our InputAxis function can correctly update the camera position.
-    Unlock the mouse on releasing our orbit button.
-    */
-    if (EventArgs.Key == EKeys::RightMouseButton) {
-        if (EventArgs.Event == IE_Pressed) {
-            m_bIsOrbiting = true;
-            Viewport->LockMouseToViewport(true);
-        }
-        else if (EventArgs.Event == IE_Released) {
-            m_bIsOrbiting = false;
-            Viewport->LockMouseToViewport(false);
-        }
-        return true;
-    }
-
     if (EventArgs.Key == EKeys::LeftMouseButton) {
         if (EventArgs.Event == IE_Pressed) {
             if (Viewport && m_CurrentInspectedObject.IsValid()) {
@@ -142,7 +76,7 @@ bool FPartEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
                 if (HitResult && HitResult->IsA(HWidgetAxis::StaticGetType())) {
                     HWidgetAxis* WidgetAxis = (HWidgetAxis*)HitResult;
                     SetCurrentWidgetAxis(WidgetAxis->Axis);
-                    return FEditorViewportClient::InputKey(EventArgs);
+                    return FEditorUtilsViewportClient::InputKey(EventArgs);
                 }
 
                 /*
@@ -220,7 +154,7 @@ bool FPartEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
             if (GetCurrentWidgetAxis() != EAxisList::None) {
                 SetCurrentWidgetAxis(EAxisList::None);
                 Invalidate();
-                return FEditorViewportClient::InputKey(EventArgs);
+                return FEditorUtilsViewportClient::InputKey(EventArgs);
             }
 
             SetCurrentWidgetAxis(EAxisList::None);
@@ -229,43 +163,7 @@ bool FPartEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
         }
     }
 
-    return FEditorViewportClient::InputKey(EventArgs);
-}
-
-bool FPartEditorViewportClient::InputAxis(const FInputKeyEventArgs& EventArgs) {
-
-    EAxisList::Type ActiveAxis = GetCurrentWidgetAxis();
-    float Delta = EventArgs.AmountDepressed;
-
-    if (ActiveAxis != EAxisList::None) {
-        return FEditorViewportClient::InputAxis(EventArgs);
-    }
-
-    if (m_bIsOrbiting) {
-        FRotator CurrentRotation = GetViewRotation();
-
-        if (EventArgs.Key == EKeys::MouseX) {
-            CurrentRotation.Yaw += Delta * 0.5f;
-            SetViewRotation(CurrentRotation);
-            UpdateCameraPositionFromOrbit();
-            Invalidate();
-            return true;
-        }
-        else if (EventArgs.Key == EKeys::MouseY) {
-            CurrentRotation.Pitch = FMath::Clamp(CurrentRotation.Pitch + (Delta * 0.5f), -85.0f, 85.0f);
-            SetViewRotation(CurrentRotation);
-            UpdateCameraPositionFromOrbit();
-            Invalidate();
-            return true;
-        }
-    }
-    return FEditorViewportClient::InputAxis(EventArgs);
-}
-
-void FPartEditorViewportClient::UpdateCameraPositionFromOrbit() {
-    FVector LookDirection = GetViewRotation().Vector();
-    FVector NewLocation = m_OrbitTargetPoint - (LookDirection * m_CameraOrbitRadius);
-    SetViewLocation(NewLocation);
+    return FEditorUtilsViewportClient::InputKey(EventArgs);
 }
 
 void FPartEditorViewportClient::SetInspectedObject(UObject* NewPartObject) {
@@ -342,13 +240,6 @@ AActor* FPartEditorViewportClient::SpawnActorComponent(UObject* InObject, FActor
     return nullptr;
 }
 
-void FPartEditorViewportClient::ZoomCamera(float ZoomAmount) {
-    m_CameraOrbitRadius = FMath::Clamp(m_CameraOrbitRadius + ZoomAmount, c_MinZoom, c_MaxZoom);
-    UpdateCameraPositionFromOrbit();
-    Invalidate();
-}
-
-
 // DRAWING AND WIDGETS
 
 
@@ -358,7 +249,7 @@ We can extend this to draw more in the future, or we can re-use this later on in
 For now, this function exists solely to give the user a way to see them edit things within our viewport client.
 */
 void FPartEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI) {
-    FEditorViewportClient::Draw(View, PDI);
+    FEditorUtilsViewportClient::Draw(View, PDI);
 
     if (!PDI) return;
 
@@ -544,7 +435,7 @@ In doing it when the tracking begins and ends, we create a larger scoped transac
 (Or when the user releases the button that began dragging.)
 */
 void FPartEditorViewportClient::TrackingStarted(const FInputEventState& InInputState, bool bIsDraggingWidget, bool bNudge) {
-    FEditorViewportClient::TrackingStarted(InInputState, bIsDraggingWidget, bNudge);
+    FEditorUtilsViewportClient::TrackingStarted(InInputState, bIsDraggingWidget, bNudge);
 
     if (bIsDraggingWidget && !m_ScopedDragTransaction.IsValid()) {
         UPDAPart* ActivePart = Cast<UPDAPart>(m_CurrentInspectedObject.Get());
@@ -575,7 +466,7 @@ void FPartEditorViewportClient::TrackingStarted(const FInputEventState& InInputS
 }
 
 void FPartEditorViewportClient::TrackingStopped() {
-    FEditorViewportClient::TrackingStopped();
+    FEditorUtilsViewportClient::TrackingStopped();
     if (m_ScopedDragTransaction.IsValid()) {
         m_ScopedDragTransaction.Reset();
     }

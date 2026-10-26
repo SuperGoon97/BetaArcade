@@ -72,3 +72,10 @@ FTooltip& UPDAPart::GetTooltipData() {
 FWeapon& UPDAPart::GetWeaponData() {
     return WeaponTooltip;
 }
+
+TSubclassOf<UObject> UPDAPart::GetObjectClass() {
+    if (Object) {
+        return Object->GetClass();
+    }
+    return nullptr;
+}

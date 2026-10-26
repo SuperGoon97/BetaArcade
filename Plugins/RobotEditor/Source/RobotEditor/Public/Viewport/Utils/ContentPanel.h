@@ -8,13 +8,20 @@
 
 typedef TSharedPtr<FAssetData> FPartAssetEntryPtr;
 
-class SPartThumbnailTitle : public SCompoundWidget {
+class SPartThumbnailTile : public SCompoundWidget {
 public:
     SLATE_BEGIN_ARGS(SPartThumbnailTitle) {}
     SLATE_END_ARGS()
 
-    void Construct(const FArguments& InArgs, const FAssetData& InAssetData, TSharedPtr<class SPartEditorViewport> InViewportWidget);
-    virtual FReply OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent) override;
+    void Construct(const FArguments& InArgs, const FAssetData& InAssetData, TSharedPtr<class SPartEditorViewport> InViewportWidget);#
+    virtual FReply OnMouseButtonDown(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual FReply OnMouseLeave(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual FReply OnMouseButtonUp(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent) override;
+
+private:
+
+    LinearColor c_HighlightedColor;
+    LinearColor c_DeslectedColor;
 
 private:
     FAssetData m_AssetDataRecord;
