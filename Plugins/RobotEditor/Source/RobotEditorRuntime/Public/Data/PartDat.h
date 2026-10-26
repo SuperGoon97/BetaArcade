@@ -55,4 +55,8 @@ public:
     FTooltip& GetTooltipData();
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "UI")
     FWeapon& GetWeaponData();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Object")
+    TSubclassOf<UObject> GetObjectClass();
+
 };

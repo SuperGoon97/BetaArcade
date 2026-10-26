@@ -15,6 +15,11 @@
 	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
+        {
+			"Name": "EditorUtils",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
+		},
 		{
 			"Name": "PartEditor",
 			"Type": "Editor",
