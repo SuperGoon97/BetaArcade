@@ -10,13 +10,9 @@ void SPartEditorViewport::Construct(const FArguments& InArgs) {
     SEditorViewport::Construct(SEditorViewport::FArguments());
 }
 
-SPartEditorViewport::~SPartEditorViewport()
-{
+SPartEditorViewport::~SPartEditorViewport() {
     if (m_ViewportClient.IsValid()) {
         m_ViewportClient->Viewport = nullptr;
-    }
-    if (m_PreviewScene.IsValid()) {
-        m_PreviewScene.Reset();
     }
 }
 

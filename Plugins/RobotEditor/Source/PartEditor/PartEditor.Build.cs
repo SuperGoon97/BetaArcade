@@ -49,7 +49,6 @@ public class PartEditor : ModuleRules
                 "ContentBrowser",
                 "PropertyEditor",
                 "InteractiveToolsFramework",
-                "GeometryCollectionEngine",
                 "RobotEditorRuntime",
                 "EditorUtils",
 				// ... add private dependencies that you statically link with here ...
