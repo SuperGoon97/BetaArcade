@@ -13,6 +13,8 @@ public:
     TSoftObjectPtr<UPDAPart> Part;
     UPROPERTY(BlueprintReadWrite, Category = "Save Data")
     FTransform RelativeTransform;
+    UPROPERTY(BlueprintReadWrite, Category = "Part Data")
+    TMap<FName, float> DataFloatMap;
 };
 
 USTRUCT(BlueprintType)

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "EditorViewportClient.h"
+#include "Templates/Tuple.h"
 #include "IDetailsView.h"
 #include "PreviewScene.h"
 
@@ -35,6 +36,7 @@ private:
     FVector m_OrbitTargetPoint = FVector::ZeroVector;
 
 protected:
+
     TSharedPtr<IDetailsView> m_AssociatedDetailsView;
 
 private:
@@ -42,5 +44,11 @@ private:
     void UpdateCameraPositionFromOrbit();
     void ZoomCamera(float ZoomAmount);
     void OnInspectorPropertyChanged(const FPropertyChangedEvent& PropertyChangedEvent);
+
+protected:
+
+    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
+    TTuple<FVector, FVector> CastRayFromCameraToMouse() const;
+    int32 GetIndexOfClosestPoint(const TArray<FVector>& Points, const TTuple<FVector, FVector>& RayInfo);
 
 };

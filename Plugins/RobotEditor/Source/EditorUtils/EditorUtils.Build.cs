@@ -45,6 +45,7 @@ public class EditorUtils : ModuleRules
                 "ContentBrowser",
                 "InputCore",
                 "PropertyEditor",
+                "GeometryCollectionEngine",
                 "ToolMenus",
             }
 			);

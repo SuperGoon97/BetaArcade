@@ -85,9 +85,6 @@ private:
 
 private:
 
-    AStaticMeshActor* CreateStaticMeshComponent(UStaticMesh* InObject, FActorSpawnParameters& SpawnParams);
-    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
-    AActor* SpawnActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
     void TrackingStarted(const FInputEventState& InInputState, bool bIsDraggingWidget, bool bNudge) override;
     void TrackingStopped() override;
     void OnInspectorPropertyChanged(const FPropertyChangedEvent& PropertyChangedEvent);
