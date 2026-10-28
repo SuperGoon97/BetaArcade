@@ -1,4 +1,5 @@
 #include "Data/PartDat.h"
+#include "Engine/StaticMeshActor.h"
 #include "Components/PrimitiveComponent.h"
 
 UPDAPart::UPDAPart()
@@ -73,9 +74,12 @@ FWeapon& UPDAPart::GetWeaponData() {
     return WeaponTooltip;
 }
 
-TSubclassOf<AActor> UPDAPart::GetObjectClass() {
-    if (Object) {
-        return Object->GetClass();
+TSubclassOf<UObject> UPDAPart::GetObjectClass() {
+    if (!Object) { return nullptr; }
+
+    if (UBlueprint* InnerBP = Cast<UBlueprint>(Object)) {
+        return InnerBP->GeneratedClass;
     }
+
     return nullptr;
 }
