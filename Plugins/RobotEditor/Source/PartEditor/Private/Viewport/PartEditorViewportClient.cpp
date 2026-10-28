@@ -1,9 +1,11 @@
 #include "Viewport/PartEditorViewportClient.h"
+#include "Engine/CollisionProfile.h"
+#include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Engine/StaticMesh.h"
-#include "Engine/Blueprint.h"
-#include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Engine/StaticMeshActor.h"
+#include "Engine/Blueprint.h"
 #include "Viewport/Utils/ContentPanel.h"
 #include "DrawDebugHelpers.h"
 #include "Data/PartDat.h"
@@ -189,7 +191,7 @@ void FPartEditorViewportClient::SetInspectedObject(UObject* NewPartObject) {
     UPDAPart* DataAsset = Cast<UPDAPart>(NewPartObject);
 
     if (!DataAsset) {
-        NewActor = SpawnActorComponent(NewPartObject, SpawnParams);
+        return;
     } else {
         if (DataAsset->Object) {
             NewActor = SpawnActorComponent(DataAsset->Object, SpawnParams);
@@ -203,23 +205,23 @@ void FPartEditorViewportClient::SetInspectedObject(UObject* NewPartObject) {
         NewActor->GetComponents(ActorComponents);
         for (UActorComponent* Component : ActorComponents) {
             if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component)) {
+                PrimitiveComponent->SetSimulatePhysics(false);
+                PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+                PrimitiveComponent->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+
                 PreviewScene->AddComponent(PrimitiveComponent, PrimitiveComponent->GetRelativeTransform());
+
+                if (UGeometryCollectionComponent* GCComp = Cast<UGeometryCollectionComponent>(PrimitiveComponent)) {
+                    GCComp->ObjectType = EObjectStateTypeEnum::Chaos_Object_Kinematic;
+
+                    GCComp->MarkRenderStateDirty();
+                }
             }
         }
     }
 
     OnSelectedObjectChanged.Broadcast();
     Invalidate();
-}
-
-AStaticMeshActor* FPartEditorViewportClient::CreateStaticMeshComponent(UStaticMesh* InObject, FActorSpawnParameters& SpawnParams) {
-    UWorld* PreviewWorld = PreviewScene->GetWorld();
-    AStaticMeshActor* MeshActor = PreviewWorld->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-    if (MeshActor && MeshActor->GetStaticMeshComponent()) {
-        MeshActor->GetStaticMeshComponent()->SetStaticMesh(InObject);
-        return MeshActor;
-    }
-    return nullptr;
 }
 
 AActor* FPartEditorViewportClient::CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams) {
@@ -230,12 +232,9 @@ AActor* FPartEditorViewportClient::CreateActorComponent(UBlueprint* InObject, FA
     return nullptr;
 }
 
-AActor* FPartEditorViewportClient::SpawnActorComponent(UObject* InObject, FActorSpawnParameters& SpawnParams) {
-    if (UStaticMesh* InnerMesh = Cast<UStaticMesh>(InObject)) {
-        return CreateStaticMeshComponent(InnerMesh, SpawnParams);
-    }
-    else if (UBlueprint* InnerBP = Cast<UBlueprint>(InObject)) {
-        return CreateActorComponent(InnerBP, SpawnParams);
+AActor* FPartEditorViewportClient::SpawnActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams) {
+    if (InObject) {
+        return CreateActorComponent(InObject, SpawnParams);
     }
     return nullptr;
 }
