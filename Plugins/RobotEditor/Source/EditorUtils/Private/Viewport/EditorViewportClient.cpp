@@ -1,6 +1,9 @@
 #include "Viewport/EditorViewportClient.h"
 #include "SceneManagement.h"
 #include "MouseDeltaTracker.h"
+#include "Engine/Blueprint.h"
+#include "Components/PrimitiveComponent.h"
+#include "GeometryCollection/GeometryCollectionComponent.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Interfaces/IMainFrameModule.h"
 
@@ -46,7 +49,16 @@ void FEditorUtilsViewportClient::SetDetailsView(TSharedPtr<IDetailsView> InDetai
 
 void FEditorUtilsViewportClient::Tick(float DeltaSeconds) {
     FEditorViewportClient::Tick(DeltaSeconds);
-    PreviewScene->GetWorld()->Tick(LEVELTICK_All, DeltaSeconds);
+    if (Viewport == nullptr) {
+        return;
+    }
+
+    if (PreviewScene) {
+        UWorld* PreviewWorld = PreviewScene->GetWorld();
+        if (PreviewWorld) {
+            PreviewScene->GetWorld()->Tick(LEVELTICK_All, DeltaSeconds);
+        }
+    }
 }
 
 bool FEditorUtilsViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
@@ -122,6 +134,62 @@ void FEditorUtilsViewportClient::ZoomCamera(float ZoomAmount) {
     UpdateCameraPositionFromOrbit();
     Invalidate();
 }
+
+AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams) {
+    if (!InObject || !InObject->GeneratedClass) { return nullptr; }
+    UWorld* PreviewWorld = PreviewScene->GetWorld();
+    if (UClass* ActorClass = InObject->GeneratedClass) {
+        AActor* SpawnedActor = PreviewWorld->SpawnActor<AActor>(ActorClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+        TInlineComponentArray<UActorComponent*> ActorComponents;
+        SpawnedActor->GetComponents(ActorComponents);
+        for (UActorComponent* Component : ActorComponents) {
+            if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component)) {
+                PrimitiveComponent->SetSimulatePhysics(false);
+                PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+                PrimitiveComponent->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+
+                PreviewScene->AddComponent(PrimitiveComponent, PrimitiveComponent->GetRelativeTransform());
+
+                if (UGeometryCollectionComponent* GCComp = Cast<UGeometryCollectionComponent>(PrimitiveComponent)) {
+                    GCComp->ObjectType = EObjectStateTypeEnum::Chaos_Object_Kinematic;
+
+                    GCComp->MarkRenderStateDirty();
+                }
+            }
+        }
+
+        return SpawnedActor;
+    }
+    return nullptr;
+}
+
+TTuple<FVector, FVector> FEditorUtilsViewportClient::CastRayFromCameraToMouse() const {
+    TTuple<FVector, FVector> RayInfo(0.0f, 0.0f);
+    return RayInfo;
+}
+
+int32 GetIndexOfClosestPoint(const TArray<FVector>& Points, const TTuple<FVector, FVector>& RayInfo) {
+    const auto& [RayStart, RayEnd] = RayInfo;
+
+    int32 ClosestIndex = INDEX_NONE;
+    double ClosestDistance = MAX_flt;
+
+    for (int i = 0; i < Points.Num(); i++) {
+        const FVector& CurrentPoint = Points[i];
+
+        FVector ClosestPointOnRay = FMath::ClosestPointOnSegment(CurrentPoint, RayStart, RayEnd);
+        float DistanceToRay = FVector::Dist(CurrentPoint, ClosestPointOnRay);
+
+        if (DistanceToRay < ClosestDistance) {
+            ClosestDistance = DistanceToRay;
+            ClosestIndex = i;
+        }
+    }
+
+    return ClosestIndex;
+}
+
 
 
 #undef LOCTEXT_NAMESPACE

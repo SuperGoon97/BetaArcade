@@ -1,11 +1,5 @@
 #include "Viewport/PartEditorViewportClient.h"
 #include "Engine/CollisionProfile.h"
-#include "GeometryCollection/GeometryCollectionComponent.h"
-#include "Engine/StaticMesh.h"
-#include "Components/StaticMeshComponent.h"
-#include "Components/PrimitiveComponent.h"
-#include "Engine/StaticMeshActor.h"
-#include "Engine/Blueprint.h"
 #include "Viewport/Utils/ContentPanel.h"
 #include "DrawDebugHelpers.h"
 #include "Data/PartDat.h"
@@ -190,53 +184,15 @@ void FPartEditorViewportClient::SetInspectedObject(UObject* NewPartObject) {
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     UPDAPart* DataAsset = Cast<UPDAPart>(NewPartObject);
 
-    if (!DataAsset) {
-        return;
-    } else {
+    if (DataAsset) {
         if (DataAsset->Object) {
-            NewActor = SpawnActorComponent(DataAsset->Object, SpawnParams);
+            NewActor = FEditorUtilsViewportClient::CreateActorComponent(DataAsset->Object, SpawnParams);
+            if (NewActor) { m_SpawnedPreviewActor = NewActor; }
          }
-    }
-
-    if (NewActor) {
-        m_SpawnedPreviewActor = NewActor;
-
-        TInlineComponentArray<UActorComponent*> ActorComponents;
-        NewActor->GetComponents(ActorComponents);
-        for (UActorComponent* Component : ActorComponents) {
-            if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component)) {
-                PrimitiveComponent->SetSimulatePhysics(false);
-                PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-                PrimitiveComponent->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
-
-                PreviewScene->AddComponent(PrimitiveComponent, PrimitiveComponent->GetRelativeTransform());
-
-                if (UGeometryCollectionComponent* GCComp = Cast<UGeometryCollectionComponent>(PrimitiveComponent)) {
-                    GCComp->ObjectType = EObjectStateTypeEnum::Chaos_Object_Kinematic;
-
-                    GCComp->MarkRenderStateDirty();
-                }
-            }
-        }
     }
 
     OnSelectedObjectChanged.Broadcast();
     Invalidate();
-}
-
-AActor* FPartEditorViewportClient::CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams) {
-    UWorld* PreviewWorld = PreviewScene->GetWorld();
-    if (UClass* ActorClass = InObject->GeneratedClass) {
-        return PreviewWorld->SpawnActor<AActor>(ActorClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-    }
-    return nullptr;
-}
-
-AActor* FPartEditorViewportClient::SpawnActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams) {
-    if (InObject) {
-        return CreateActorComponent(InObject, SpawnParams);
-    }
-    return nullptr;
 }
 
 // DRAWING AND WIDGETS
