@@ -25,7 +25,7 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     TObjectPtr<USoundBase> SQ_Death;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
-    TObjectPtr<UObject> Object;
+    TObjectPtr<UBlueprint> Object;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     FTooltip Tooltip;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
@@ -55,4 +55,8 @@ public:
     FTooltip& GetTooltipData();
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "UI")
     FWeapon& GetWeaponData();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Object")
+    TSubclassOf<UObject> GetObjectClass();
+
 };
