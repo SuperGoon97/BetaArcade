@@ -10,13 +10,9 @@ void SPartEditorViewport::Construct(const FArguments& InArgs) {
     SEditorViewport::Construct(SEditorViewport::FArguments());
 }
 
-SPartEditorViewport::~SPartEditorViewport()
-{
+SPartEditorViewport::~SPartEditorViewport() {
     if (m_ViewportClient.IsValid()) {
         m_ViewportClient->Viewport = nullptr;
-    }
-    if (m_PreviewScene.IsValid()) {
-        m_PreviewScene.Reset();
     }
 }
 
@@ -41,7 +37,7 @@ TSharedPtr<SWidget> SPartEditorViewport::BuildViewportToolbar() {
 void SPartEditorViewport::SetEditingObject(UObject* NewObject) {
     if (m_ViewportClient.IsValid()) {
         m_ViewportClient->SetInspectedObject(NewObject);
-        m_ViewportClient->SetSelectedAnchorIndex(-1);
+        m_ViewportClient->SetSelectedIndex(-1);
     }
     return;
 }

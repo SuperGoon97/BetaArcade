@@ -26,6 +26,7 @@ public class PartEditor : ModuleRules
 			new string[]
 			{
 				"Core",
+                "Niagara",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -39,7 +40,6 @@ public class PartEditor : ModuleRules
 				"EditorFramework",
 				"UnrealEd",
 				"ToolMenus",
-                "Niagara",
 				"CoreUObject",
 				"Engine",
 				"Slate",
@@ -49,7 +49,8 @@ public class PartEditor : ModuleRules
                 "ContentBrowser",
                 "PropertyEditor",
                 "InteractiveToolsFramework",
-                "RobotEditorRuntime"
+                "RobotEditorRuntime",
+                "EditorUtils",
 				// ... add private dependencies that you statically link with here ...
 			}
 			);

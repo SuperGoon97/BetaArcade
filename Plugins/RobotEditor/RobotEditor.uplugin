@@ -15,6 +15,11 @@
 	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
+        {
+			"Name": "EditorUtils",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
+		},
 		{
 			"Name": "PartEditor",
 			"Type": "Editor",
@@ -30,5 +35,11 @@
             "Type": "Runtime",
             "LoadingPhase": "PreDefault"
         }
+	],
+	"Plugins": [
+		{
+			"Name": "Niagara",
+			"Enabled": true
+		}
 	]
 }

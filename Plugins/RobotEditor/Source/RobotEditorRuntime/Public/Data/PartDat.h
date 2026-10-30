@@ -11,10 +11,11 @@ class UNiagaraSystem;
 class USoundBase;
 
 UCLASS(BlueprintType)
-class UPDAPart : public UPrimaryDataAsset {
+class ROBOTEDITORRUNTIME_API UPDAPart : public UPrimaryDataAsset {
 GENERATED_BODY()
 
 public:
+    UPDAPart();
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Part Dat")
     FString PartName = TEXT("UNNAMED");
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
@@ -24,19 +25,23 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     TObjectPtr<USoundBase> SQ_Death;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
-    TObjectPtr<UObject> Object;
+    TObjectPtr<UBlueprint> Object;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     FTooltip Tooltip;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     FWeapon WeaponTooltip;
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Part Data")
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Part Dat")
     TArray<FAnchor> Anchors;
+    UPROPERTY()
+    TArray<FVector> CollisionPoints;
 
 public:
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Health")
     float GetHealth();
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Health")
     float SetHealth(float NewHealth);
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Collision")
+    FBox GetBoundingBox();
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Visuals")
     UNiagaraSystem* GetDeathParticle();
@@ -50,4 +55,8 @@ public:
     FTooltip& GetTooltipData();
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "UI")
     FWeapon& GetWeaponData();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Object")
+    TSubclassOf<UObject> GetObjectClass();
+
 };

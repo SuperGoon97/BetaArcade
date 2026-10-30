@@ -10,6 +10,8 @@ typedef TSharedPtr<FAssetData> FPartAssetEntryPtr;
 
 class SPartThumbnailTitle : public SCompoundWidget {
 public:
+    const int THUMBNAIL_SIZE = 128;
+
     SLATE_BEGIN_ARGS(SPartThumbnailTitle) {}
     SLATE_END_ARGS()
 

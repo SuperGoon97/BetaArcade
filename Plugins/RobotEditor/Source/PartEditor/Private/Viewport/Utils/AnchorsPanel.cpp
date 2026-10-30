@@ -110,7 +110,8 @@ void SAnchorsPanel::OnAnchorSelectionChanged(FAnchorListEntryPtr Selection, ESel
     TSharedPtr<FPartEditorViewportClient> ClientPtr = m_AssociatedViewport.Pin()->GetPartClient();
 
     if (!Selection.IsValid()) {
-        ClientPtr->SetSelectedAnchorIndex(INDEX_NONE);
+        ClientPtr->SetPartSelectionType(EPartSelectionType::None);
+        ClientPtr->SetSelectedIndex(INDEX_NONE);
         ClientPtr->Invalidate();
         return;
     }
@@ -118,7 +119,8 @@ void SAnchorsPanel::OnAnchorSelectionChanged(FAnchorListEntryPtr Selection, ESel
     if (ClientPtr.IsValid()) {
         int32 FoundIndex = m_ListDataSource.Find(Selection);
         if (FoundIndex != INDEX_NONE) {
-            ClientPtr->SetSelectedAnchorIndex(FoundIndex);
+            ClientPtr->SetPartSelectionType(EPartSelectionType::Anchor);
+            ClientPtr->SetSelectedIndex(FoundIndex);
             ClientPtr->Invalidate();
         }
     }
