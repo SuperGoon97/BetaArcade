@@ -6,7 +6,10 @@
 #include "IDetailsView.h"
 #include "PreviewScene.h"
 
-class EDITORUTILS_API FEditorUtilsViewportClient : public FEditorViewportClient {
+class SThumbnailTile;
+class UPDAPart;
+
+class EDITORUTILS_API FEditorUtilsViewportClient : public FEditorViewportClient, public TSharedFromThis<FEditorUtilsViewportClient> {
 public:
     FEditorUtilsViewportClient(FPreviewScene& InPreviewScene);
     virtual ~FEditorUtilsViewportClient() override;
@@ -22,6 +25,10 @@ public:
     TSharedPtr<IDetailsView> GetDetailsView() { return m_AssociatedDetailsView; }
 
     virtual FSceneView* CalcSceneView(FSceneViewFamily* ViewFamily, const int32 StereoViewIndex = INDEX_NONE) override;
+    virtual void OnThumbnailTriggered(UPDAPart* Part) = 0;
+    virtual void ConnectTileSingleClick(SThumbnailTile* Tile) = 0;
+    virtual void ConnectTileDoubleClick(SThumbnailTile* Tile) = 0;
+    virtual void OnAddButtonPressed() = 0;
 
 private:
 
@@ -48,7 +55,9 @@ private:
 protected:
 
     AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
-    TTuple<FVector, FVector> CastRayFromCameraToMouse() const;
-    int32 GetIndexOfClosestPoint(const TArray<FVector>& Points, const TTuple<FVector, FVector>& RayInfo);
+    TTuple<FVector, FVector> CastRayFromCameraToMouse();
 
+private:
+
+    FVector GetLocationFromPoint(const FVector& Point) const;
 };

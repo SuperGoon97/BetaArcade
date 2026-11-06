@@ -59,6 +59,11 @@ public:
     FOnSelectedObjectSaved OnSelectedObjectSaved;
     FOnSelectedPointChanged OnSelectedPointChanged;
 
+    virtual void OnThumbnailTriggered(UPDAPart* Part) override;
+    virtual void ConnectTileSingleClick(SThumbnailTile* Tile) override;
+    virtual void ConnectTileDoubleClick(SThumbnailTile* Tile) override;
+    virtual void OnAddButtonPressed() override;
+
 private:
 
     bool m_bIsClickingGizmo = false;
@@ -89,5 +94,6 @@ private:
     void TrackingStopped() override;
     void OnInspectorPropertyChanged(const FPropertyChangedEvent& PropertyChangedEvent);
     void SaveNewAsset(UPDAPart* ActivePart, const FString& ChosenPackagePath, const FString& CurrentName);
+    TTuple<int32, bool, float> GetIndexOfClosestPoint(const TArray<FVector>& Points, const TTuple<FVector, FVector>& RayInfo, float CurrentClosestPoint = MAX_flt);
 
 };
