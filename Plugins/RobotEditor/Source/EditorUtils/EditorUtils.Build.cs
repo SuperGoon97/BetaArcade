@@ -43,6 +43,7 @@ public class EditorUtils : ModuleRules
                 "MainFrame",
                 "LevelEditor",
                 "ContentBrowser",
+                "RobotEditorRuntime",
                 "InputCore",
                 "PropertyEditor",
                 "GeometryCollectionEngine",

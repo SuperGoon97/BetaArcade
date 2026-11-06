@@ -4,6 +4,7 @@
 #include "Engine/Blueprint.h"
 #include "Components/PrimitiveComponent.h"
 #include "GeometryCollection/GeometryCollectionComponent.h"
+#include "Viewport/Utils/PartContentBrowser.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Interfaces/IMainFrameModule.h"
 
@@ -164,32 +165,30 @@ AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, F
     return nullptr;
 }
 
-TTuple<FVector, FVector> FEditorUtilsViewportClient::CastRayFromCameraToMouse() const {
-    TTuple<FVector, FVector> RayInfo(0.0f, 0.0f);
-    return RayInfo;
+TTuple<FVector, FVector> FEditorUtilsViewportClient::CastRayFromCameraToMouse() {
+    FViewportCursorLocation CursorLocation = GetCursorWorldLocationFromMousePos();
+    FVector RayStart = CursorLocation.GetOrigin();
+    FVector RayDirection = CursorLocation.GetDirection();
+    FVector RayEnd = RayStart + (RayDirection * 10000.0f);
+
+    return MakeTuple(RayStart, RayEnd);
 }
 
-int32 GetIndexOfClosestPoint(const TArray<FVector>& Points, const TTuple<FVector, FVector>& RayInfo) {
-    const auto& [RayStart, RayEnd] = RayInfo;
-
-    int32 ClosestIndex = INDEX_NONE;
-    double ClosestDistance = MAX_flt;
-
-    for (int i = 0; i < Points.Num(); i++) {
-        const FVector& CurrentPoint = Points[i];
-
-        FVector ClosestPointOnRay = FMath::ClosestPointOnSegment(CurrentPoint, RayStart, RayEnd);
-        float DistanceToRay = FVector::Dist(CurrentPoint, ClosestPointOnRay);
-
-        if (DistanceToRay < ClosestDistance) {
-            ClosestDistance = DistanceToRay;
-            ClosestIndex = i;
-        }
-    }
-
-    return ClosestIndex;
+void FEditorUtilsViewportClient::OnThumbnailTriggered(UPDAPart* Part) {
+    UE_LOG(LogTemp, Log, TEXT("Tried to trigger thumbnail but called parent class OnThumbnailTriggered. Did you implement it?"));
+    return;
 }
 
+void FEditorUtilsViewportClient::ConnectTileSingleClick(SThumbnailTile* Tile) {
+    Tile->OnThumbnailClicked.AddSP(this, &FEditorUtilsViewportClient::OnThumbnailTriggered);
+}
 
+void FEditorUtilsViewportClient::ConnectTileDoubleClick(SThumbnailTile* Tile) {
+    Tile->OnThumbnailDoubleClicked.AddSP(this, &FEditorUtilsViewportClient::OnThumbnailTriggered);
+}
+
+void FEditorUtilsViewportClient::OnAddButtonPressed() {
+    return;
+}
 
 #undef LOCTEXT_NAMESPACE

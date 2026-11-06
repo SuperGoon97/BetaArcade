@@ -11,7 +11,7 @@ void SAnchorsPanel::Construct(const FArguments& InArgs, TSharedPtr<SPartEditorVi
 
     if (!m_AssociatedViewport.IsValid()) return;
 
-    TSharedPtr<FPartEditorViewportClient> Client = m_AssociatedViewport.Pin()->GetPartClient();
+    TSharedPtr<FPartEditorViewportClient> Client = StaticCastSharedPtr<FPartEditorViewportClient>(m_AssociatedViewport.Pin()->GetViewportClient());
     TSharedPtr<IDetailsView> DetailsView = Client->GetDetailsView();
 
     Client->OnSelectedObjectChanged.AddRaw(this, &SAnchorsPanel::RefreshAnchorList);
@@ -43,7 +43,7 @@ void SAnchorsPanel::Construct(const FArguments& InArgs, TSharedPtr<SPartEditorVi
                 .VAlign(VAlign_Center)
                 .OnClicked_Lambda([this]() -> FReply {
                     if (m_AssociatedViewport.IsValid()) {
-                        TSharedPtr<FPartEditorViewportClient> Client = m_AssociatedViewport.Pin()->GetPartClient();
+                        TSharedPtr<FPartEditorViewportClient> Client = StaticCastSharedPtr<FPartEditorViewportClient>(m_AssociatedViewport.Pin()->GetViewportClient());
                         if (Client.IsValid()) {
                             if (UPDAPart* ActivePart = Cast<UPDAPart>(Client->GetInspectedObject())) {
                                 FAnchor NewAnchor;
@@ -81,7 +81,7 @@ void SAnchorsPanel::RefreshAnchorList() {
     m_ListDataSource.Empty();
 
     if (m_AssociatedViewport.IsValid()) {
-        TSharedPtr<FPartEditorViewportClient> ClientPtr = m_AssociatedViewport.Pin()->GetPartClient();
+        TSharedPtr<FPartEditorViewportClient> ClientPtr = StaticCastSharedPtr<FPartEditorViewportClient>(m_AssociatedViewport.Pin()->GetViewportClient());
 
         UPDAPart* ActivePart = Cast<UPDAPart>(ClientPtr->GetInspectedObject());
         if (ActivePart) {
@@ -107,7 +107,7 @@ TSharedRef<ITableRow> SAnchorsPanel::OnGenerateAnchorRow(FAnchorListEntryPtr Ite
 
 void SAnchorsPanel::OnAnchorSelectionChanged(FAnchorListEntryPtr Selection, ESelectInfo::Type SelectInfo) {
     if (!m_AssociatedViewport.IsValid()) return;
-    TSharedPtr<FPartEditorViewportClient> ClientPtr = m_AssociatedViewport.Pin()->GetPartClient();
+    TSharedPtr<FPartEditorViewportClient> ClientPtr = StaticCastSharedPtr<FPartEditorViewportClient>(m_AssociatedViewport.Pin()->GetViewportClient());
 
     if (!Selection.IsValid()) {
         ClientPtr->SetPartSelectionType(EPartSelectionType::None);

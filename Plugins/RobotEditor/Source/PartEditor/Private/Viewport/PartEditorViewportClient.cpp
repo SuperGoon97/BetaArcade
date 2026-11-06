@@ -1,4 +1,5 @@
 #include "Viewport/PartEditorViewportClient.h"
+#include "Viewport/PartEditorViewport.h"
 #include "Engine/CollisionProfile.h"
 #include "Viewport/Utils/ContentPanel.h"
 #include "DrawDebugHelpers.h"
@@ -87,51 +88,38 @@ bool FPartEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
                 rather than an exact click. This gives the user some lee-way and makes our selection logic slightly easier too.
                 */
 
-                FViewportCursorLocation CursorLocation = GetCursorWorldLocationFromMousePos();
-                FVector RayOrigin = CursorLocation.GetOrigin();
-                FVector RayDirection = CursorLocation.GetDirection();
-                FVector RayEnd = RayOrigin + (RayDirection * 10000.0f);
+                // FViewportCursorLocation CursorLocation = GetCursorWorldLocationFromMousePos();
+                // FVector RayOrigin = CursorLocation.GetOrigin();
+                // FVector RayDirection = CursorLocation.GetDirection();
+                // FVector RayEnd = RayOrigin + (RayDirection * 10000.0f);
+
+                TTuple<FVector, FVector> RayData = CastRayFromCameraToMouse();
 
                 if (UPDAPart* ActivePart = Cast<UPDAPart>(m_CurrentInspectedObject.Get())) {
-                    float BestHitDistance = FLT_MAX;
                     int32 SelectedIndex = INDEX_NONE;
                     EPartSelectionType SelectedType = EPartSelectionType::None;
-
-                    /*
-                    We only check for our anchors if the user is drawing anchors, this is the same for the check for whether we should draw collision below.
-                    This check works quite simply, we just check whichever point is closest to a line from the camera. If it is closer than the current BestHitDistance and is within an acceptable radius
-                    (10.0f by default,) then that is the currently chosen index.
-
-                    We need to update our m_SelectedType to our relevant EPartSelectionType
-                    And our selection index, which tells our draw loop and gizmo tool which specific index from our array we want to draw and edit
-                    */
+                    float BestHitDistance = MAX_flt;
 
                     if (m_bDrawAnchors) {
-                        for (int32 i = 0; i < ActivePart->Anchors.Num(); i++) {
-                            FVector PointPos = ActivePart->Anchors[i].Position;
-                            // Handy dandy little FMath function for finding the closest point on a line.
-                            FVector ClosestPointOnRay = FMath::ClosestPointOnSegment(PointPos, RayOrigin, RayEnd);
-                            float DistanceToRay = FVector::Dist(PointPos, ClosestPointOnRay);
-
-                            if (DistanceToRay < 10.0f &&  DistanceToRay < BestHitDistance) {
-                                BestHitDistance = DistanceToRay;
-                                SelectedIndex = i;
-                                SelectedType = EPartSelectionType::Anchor;
-                            }
+                        TArray<FVector> TempPoints;
+                        TempPoints.Reserve(ActivePart->Anchors.Num());
+                        for (const FAnchor& Anchor : ActivePart->Anchors) {
+                            TempPoints.Add(Anchor.Position);
+                        }
+                        const auto& [_SelectedIndex, bWasSelected, ClosestDistance] = GetIndexOfClosestPoint(TempPoints, RayData, BestHitDistance);
+                        if (bWasSelected) {
+                            SelectedIndex = _SelectedIndex;
+                            SelectedType = EPartSelectionType::Anchor;
+                            BestHitDistance = ClosestDistance;
                         }
                     }
 
                     if (m_bDrawCollision) {
-                        for (int32 i = 0; i < ActivePart->CollisionPoints.Num(); i++) {
-                            FVector PointPos = ActivePart->CollisionPoints[i];
-                            FVector ClosestPointOnRay = FMath::ClosestPointOnSegment(PointPos, RayOrigin, RayEnd);
-                            float DistanceToRay = FVector::Dist(PointPos, ClosestPointOnRay);
-
-                            if (DistanceToRay < 10.0f && DistanceToRay < BestHitDistance) {
-                                BestHitDistance = DistanceToRay;
-                                SelectedIndex = i;
-                                SelectedType = EPartSelectionType::CollisionPoint;
-                            }
+                        const auto& [_SelectedIndex, bWasSelected, ClosestDistance] = GetIndexOfClosestPoint(ActivePart->CollisionPoints, RayData, BestHitDistance);
+                        if (bWasSelected) {
+                            SelectedIndex = _SelectedIndex;
+                            SelectedType = EPartSelectionType::CollisionPoint;
+                            BestHitDistance = ClosestDistance;
                         }
                     }
 
@@ -160,6 +148,29 @@ bool FPartEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
     }
 
     return FEditorUtilsViewportClient::InputKey(EventArgs);
+}
+
+TTuple<int32, bool, float> FPartEditorViewportClient::GetIndexOfClosestPoint(const TArray<FVector>& Points, const TTuple<FVector, FVector>& RayInfo, float CurrentClosestPoint) {
+    const auto& [RayStart, RayEnd] = RayInfo;
+
+    int32 ClosestIndex = INDEX_NONE;
+    double ClosestDistance = CurrentClosestPoint;
+    bool bWasSelected = false;
+
+    for (int i = 0; i < Points.Num(); i++) {
+        const FVector& CurrentPos = Points[i];
+
+        FVector ClosestPointOnRay = FMath::ClosestPointOnSegment(CurrentPos, RayStart, RayEnd);
+        float DistanceToRay = FVector::Dist(CurrentPos, ClosestPointOnRay);
+
+        if (DistanceToRay < ClosestDistance && DistanceToRay < 10.0f) {
+            ClosestDistance = DistanceToRay;
+            ClosestIndex = i;
+            bWasSelected = true;
+        }
+    }
+
+    return MakeTuple(ClosestIndex, bWasSelected, ClosestDistance);
 }
 
 void FPartEditorViewportClient::SetInspectedObject(UObject* NewPartObject) {
@@ -564,5 +575,40 @@ void FPartEditorViewportClient::SaveNewAsset(UPDAPart* ActivePart, const FString
     }
 }
 
+void FPartEditorViewportClient::OnThumbnailTriggered(UPDAPart* Part) {
+    SetInspectedObject(Part);
+    SetSelectedIndex(INDEX_NONE);
+    return;
+}
+
+void FPartEditorViewportClient::ConnectTileSingleClick(SThumbnailTile* Tile) {
+    return;
+}
+
+void FPartEditorViewportClient::ConnectTileDoubleClick(SThumbnailTile* Tile) {
+    Tile->OnThumbnailDoubleClicked.AddSP(this, &FPartEditorViewportClient::OnThumbnailTriggered);
+}
+
+void FPartEditorViewportClient::OnAddButtonPressed() {
+    if (m_CurrentInspectedObject.Pin() && m_CurrentInspectedObject.Pin()->GetPackage() && m_CurrentInspectedObject.Pin()->GetPackage()->IsDirty()) {
+        FText DialogText = LOCTEXT("UnsavedChangesBody", "You may have unsaved data, do you wish to create a new part?");
+        FText DialogTitle = LOCTEXT("UnsavedChangesTitle", "UnsavedChanges");
+
+        EAppReturnType::Type UserChoice = FMessageDialog::Open(
+            EAppMsgType::YesNo,
+            DialogText,
+            DialogTitle
+        );
+
+        if (UserChoice != EAppReturnType::Yes){
+                return;
+        }
+    }
+
+    UPDAPart* NewBlankPart = NewObject<UPDAPart>(GetTransientPackage(), UPDAPart::StaticClass());
+    if (NewBlankPart) {
+        OnThumbnailTriggered(NewBlankPart);
+    }
+}
 
 #undef LOCTEXT_NAMESPACE

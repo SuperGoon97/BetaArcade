@@ -44,15 +44,6 @@ FBox UPDAPart::GetBoundingBox() {
     return FBox(MinBounds, MaxBounds);
 }
 
-float UPDAPart::GetHealth() {
-    return Health;
-}
-
-float UPDAPart::SetHealth(float NewHealth) {
-    Health = NewHealth;
-    return Health;
-}
-
 UNiagaraSystem* UPDAPart::GetDeathParticle() {
     return NS_Death;
 }
@@ -82,4 +73,8 @@ TSubclassOf<UObject> UPDAPart::GetObjectClass() {
     }
 
     return nullptr;
+}
+
+TMap<FName, FPartStat>& UPDAPart::GetStats() {
+    return PartStats;
 }

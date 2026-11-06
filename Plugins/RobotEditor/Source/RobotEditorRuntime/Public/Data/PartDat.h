@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "Structs/Tooltip.h"
 #include "Structs/WeaponTooltip.h"
+#include "Structs/PartStat.h"
 #include "Structs/Anchor.h"
 #include "PartDat.generated.h"
 
@@ -19,27 +20,23 @@ public:
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Part Dat")
     FString PartName = TEXT("UNNAMED");
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
-    float Health;
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     TObjectPtr<UNiagaraSystem> NS_Death;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     TObjectPtr<USoundBase> SQ_Death;
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
     TObjectPtr<UBlueprint> Object;
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Statistics")
+    TMap<FName, FPartStat> PartStats;
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "UI")
     FTooltip Tooltip;
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Part Dat")
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "UI")
     FWeapon WeaponTooltip;
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Part Dat")
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Internals")
     TArray<FAnchor> Anchors;
     UPROPERTY()
     TArray<FVector> CollisionPoints;
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Health")
-    float GetHealth();
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Health")
-    float SetHealth(float NewHealth);
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Collision")
     FBox GetBoundingBox();
 
@@ -58,5 +55,8 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Object")
     TSubclassOf<UObject> GetObjectClass();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Stats")
+    TMap<FName, FPartStat>& GetStats();
 
 };
