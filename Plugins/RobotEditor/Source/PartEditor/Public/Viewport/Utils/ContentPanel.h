@@ -1,42 +1,31 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Widgets/SCompoundWidget.h"
-#include "Widgets/Views/STileView.h"
-#include "Widgets/Layout/SWrapBox.h"
-#include "AssetRegistry/AssetData.h"
+#include "Viewport/Utils/PartContentBrowser.h"
 
 typedef TSharedPtr<FAssetData> FPartAssetEntryPtr;
 
-class SPartThumbnailTitle : public SCompoundWidget {
+class SPartThumbnailTile : public SThumbnailTile {
 public:
     const int THUMBNAIL_SIZE = 128;
 
-    SLATE_BEGIN_ARGS(SPartThumbnailTitle) {}
+    SLATE_BEGIN_ARGS(SPartThumbnailTile) {}
     SLATE_END_ARGS()
 
-    void Construct(const FArguments& InArgs, const FAssetData& InAssetData, TSharedPtr<class SPartEditorViewport> InViewportWidget);
+    void Construct(const FArguments& InArgs, const FAssetData& InAssetData, TSharedPtr<class SEditorUtilsViewport> InViewportWidget);
     virtual FReply OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent) override;
 
-private:
-    FAssetData m_AssetDataRecord;
-    TWeakPtr<class SPartEditorViewport> m_AssociatedViewport;
-
-    TSharedPtr<FAssetThumbnail> m_AssetThumbnailInstance;
 };
 
-class SPartContentBrowser : public SCompoundWidget {
+class SPartContentBrowser : public SContentBrowser {
 public:
-    SLATE_BEGIN_ARGS(SPartContentBrowser) {}
+    SLATE_BEGIN_ARGS(SPartContentBrowser)
+        : _AddPlusButton(false)
+    {}
+        SLATE_ARGUMENT(bool, AddPlusButton)
     SLATE_END_ARGS()
 
-    void Construct(const FArguments& InArgs, TSharedPtr<class SPartEditorViewport> InViewportWidget);
+    void Construct(const FArguments& InArgs, TSharedPtr<class SEditorUtilsViewport> InViewportWidget);
     void ScanPluginDirectory();
 
-    static TWeakPtr<SPartContentBrowser> m_Instance;
-private:
-    TSharedRef<SWidget> OnGenerateTileWidget(FPartAssetEntryPtr Item);
-
-    TWeakPtr<class SPartEditorViewport> m_AssociatedViewport;
-    TSharedPtr<SWrapBox> m_TileGridContainer;
 };

@@ -21,7 +21,7 @@ TSharedRef<SDockTab> SPartEditorTab::MakeTab(const FSpawnTabArgs& SpawnTabArgs) 
 
     TSharedRef<IDetailsView> PartsDetailsView = PropertyEditorModule.CreateDetailView(DetailsViewArgs);
     TSharedRef<SPartEditorViewport> ViewportWidget = SNew(SPartEditorViewport);
-    TSharedPtr<FPartEditorViewportClient> ClientPtr = ViewportWidget->GetPartClient();
+    TSharedPtr<FPartEditorViewportClient> ClientPtr = StaticCastSharedPtr<FPartEditorViewportClient>(ViewportWidget->GetViewportClient());
     if (ClientPtr.IsValid()) {
         ClientPtr->SetDetailsView(PartsDetailsView);
     }
@@ -73,7 +73,8 @@ TSharedRef<SDockTab> SPartEditorTab::MakeTab(const FSpawnTabArgs& SpawnTabArgs) 
             + SSplitter::Slot()
             .Value(0.25f)
             [
-                SNew(SPartContentBrowser, ViewportWidget)
+                SNew(SContentBrowser, ViewportWidget)
+                .AddPlusButton(true)
             ]
         ];
 }
