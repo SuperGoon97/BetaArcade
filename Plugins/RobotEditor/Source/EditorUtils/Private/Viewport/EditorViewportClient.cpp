@@ -7,6 +7,10 @@
 #include "Viewport/Utils/PartContentBrowser.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Interfaces/IMainFrameModule.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "UObject/Package.h"
+#include "AssetToolsModule.h"
+#include "FileHelpers.h"
 
 #define LOCTEXT_NAMESPACE "EditorViewport"
 
@@ -142,24 +146,15 @@ AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, F
     if (UClass* ActorClass = InObject->GeneratedClass) {
         AActor* SpawnedActor = PreviewWorld->SpawnActor<AActor>(ActorClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 
-        TInlineComponentArray<UActorComponent*> ActorComponents;
-        SpawnedActor->GetComponents(ActorComponents);
-        for (UActorComponent* Component : ActorComponents) {
-            if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component)) {
-                PrimitiveComponent->SetSimulatePhysics(false);
-                PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-                PrimitiveComponent->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+        SpawnedActor->SetActorTickEnabled(false);
 
-                PreviewScene->AddComponent(PrimitiveComponent, PrimitiveComponent->GetRelativeTransform());
-
-                if (UGeometryCollectionComponent* GCComp = Cast<UGeometryCollectionComponent>(PrimitiveComponent)) {
-                    GCComp->ObjectType = EObjectStateTypeEnum::Chaos_Object_Kinematic;
-
-                    GCComp->MarkRenderStateDirty();
-                }
+        TInlineComponentArray<UActorComponent*> Components;
+        SpawnedActor->GetComponents(Components);
+        for (UActorComponent* Component : Components) {
+            if (Component) {
+                Component->SetComponentTickEnabled(false);
             }
         }
-
         return SpawnedActor;
     }
     return nullptr;
@@ -189,6 +184,24 @@ void FEditorUtilsViewportClient::ConnectTileDoubleClick(SThumbnailTile* Tile) {
 
 void FEditorUtilsViewportClient::OnAddButtonPressed() {
     return;
+}
+
+void FEditorUtilsViewportClient::ReloadAssetRegistryModule(const FString& AssetGamePath) {
+    FString AbsolutePhysicalPath = FPackageName::LongPackageNameToFilename(AssetGamePath);
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PlatformFile.DirectoryExists(*AbsolutePhysicalPath)) {
+        PlatformFile.CreateDirectoryTree(*AbsolutePhysicalPath);
+    }
+
+    if (FAssetRegistryModule* AssetRegistryModule = FModuleManager::LoadModulePtr<FAssetRegistryModule>("AssetRegistry")) {
+        IAssetRegistry& AssetRegistry = AssetRegistryModule->Get();
+        AssetRegistry.AddPath(AssetGamePath);
+
+        TArray<FString> PathsToScan;
+        PathsToScan.Add(AssetGamePath);
+
+        AssetRegistry.ScanPathsSynchronous(PathsToScan, true);
+    }
 }
 
 #undef LOCTEXT_NAMESPACE

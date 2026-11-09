@@ -62,7 +62,7 @@ void SThumbnailTile::Construct(const FArguments& InArgs, const FAssetData& InAss
         .WidthOverride(96.0f)
         .HeightOverride(96.0f)
         [
-            SNew(SBorder)
+            SAssignNew(m_BackgroundBorder, SBorder)
             .BorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"))
             .Padding(FMargin(4.0f))
             .HAlign(HAlign_Center)
@@ -141,6 +141,9 @@ void SContentBrowser::Construct(const FArguments& InArgs, TSharedPtr<class SEdit
 FReply SThumbnailTile::OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent) {
     if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton) {
         OnThumbnailDoubleClicked.Broadcast(GetRelatedPart());
+        if(SContentBrowser::m_Instance.IsValid()) {
+            SContentBrowser::m_Instance.Pin()->OnThumbnailSelected.Broadcast(this);
+        }
         return FReply::Handled();
     }
     return FReply::Unhandled();
@@ -157,6 +160,9 @@ FReply SThumbnailTile::OnMouseButtonUp(const FGeometry& InMyGeometry, const FPoi
 
         if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton) {
             OnThumbnailClicked.Broadcast(GetRelatedPart());
+            if(SContentBrowser::m_Instance.IsValid()) {
+                SContentBrowser::m_Instance.Pin()->OnThumbnailSelected.Broadcast(this);
+            }
             return FReply::Handled();
         }
     }
@@ -172,6 +178,17 @@ UPDAPart* SThumbnailTile::GetRelatedPart() {
     return ReturnPart;
 }
 
+void SThumbnailTile::OnThumbnailSelected(SThumbnailTile* Thumbnail) {
+    if (!m_BackgroundBorder.IsValid()) {
+        return;
+    }
+    else if (Thumbnail == this) {
+        m_BackgroundBorder->SetBorderImage(FAppStyle::Get().GetBrush("Brushes.Select"));
+    } else {
+        m_BackgroundBorder->SetBorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"));
+    }
+    return;
+}
 
 void SContentBrowser::ScanPluginDirectory() {
     if (!m_TileGridContainer.IsValid()) return;
@@ -215,6 +232,7 @@ void SContentBrowser::ScanPluginDirectory() {
 
     for (const FAssetData& AssetRecord : ExtractedAssetRecords) {
         TSharedRef<SThumbnailTile> GeneratedTileCard = SNew(SThumbnailTile, AssetRecord, m_AssociatedViewport.Pin());
+        OnThumbnailSelected.AddSP(GeneratedTileCard, &SThumbnailTile::OnThumbnailSelected);
         m_TileGridContainer->AddSlot()
             .Padding(FMargin(4.0f))
             [

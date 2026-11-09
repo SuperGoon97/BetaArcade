@@ -9,12 +9,23 @@ USTRUCT(BlueprintType)
 struct FPartData {
 GENERATED_BODY()
 public:
-    UPROPERTY(BlueprintReadWrite, Category = "Save Data")
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Save Data")
     TSoftObjectPtr<UPDAPart> Part;
-    UPROPERTY(BlueprintReadWrite, Category = "Save Data")
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Save Data")
     FTransform RelativeTransform;
-    UPROPERTY(BlueprintReadWrite, Category = "Part Data")
+    UPROPERTY(BlueprintReadWrite,  EditAnywhere, Category = "Part Data")
     TMap<FName, float> DataFloatMap;
+
+    FPartData()
+        : Part(nullptr)
+        , RelativeTransform(FTransform::Identity)
+    {}
+
+    FPartData(TSoftObjectPtr<UPDAPart> AssetPtr, const FTransform& InTransform, const TMap<FName, float>& InModifiers)
+        : Part(AssetPtr)
+        , RelativeTransform(InTransform)
+        , DataFloatMap(InModifiers)
+    {}
 };
 
 USTRUCT(BlueprintType)
@@ -31,4 +42,6 @@ GENERATED_BODY()
 public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Robot Data")
     FRobotData RobotParts;
+    UPROPERTY(EditAnywhere, Category = "Internal Data")
+    FName RobotName = "UNNAMED";
 };
