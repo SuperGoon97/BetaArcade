@@ -34,7 +34,7 @@ TSharedRef< FSlateStyleSet > FPartEditorStyle::Create() {
 	TSharedRef< FSlateStyleSet > Style = MakeShareable(new FSlateStyleSet("PartEditorStyle"));
 	Style->SetContentRoot(IPluginManager::Get().FindPlugin("RobotEditor")->GetBaseDir() / TEXT("Resources"));
 
-	Style->Set("PartEditor.OpenPluginWindow", new IMAGE_BRUSH_SVG(TEXT("PlaceholderButtonIcon"), Icon20x20));
+	Style->Set("PartEditor.OpenPluginWindow", new IMAGE_BRUSH(TEXT("PartEditor"), Icon20x20));
 
 	return Style;
 }

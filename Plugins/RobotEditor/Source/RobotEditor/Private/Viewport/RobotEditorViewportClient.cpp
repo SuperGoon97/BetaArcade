@@ -468,6 +468,7 @@ void FRobotEditorViewportClient::SaveActiveAsset() {
         Data->MarkPackageDirty();
 
         UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
+        LoadRobot(Data);
     }
     else if (CurrentName.Equals(TEXT("UNNAMED"), ESearchCase::IgnoreCase)) {
         FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
@@ -497,8 +498,6 @@ void FRobotEditorViewportClient::SaveActiveAsset() {
         FString TargetFolderPackagePath = AssetGamePath;
         SaveNewAsset(Data, TargetFolderPackagePath, CurrentName);
     }
-
-    LoadRobot(m_CurrentRobotData);
     return;
 }
 
@@ -527,6 +526,7 @@ void FRobotEditorViewportClient::SaveNewAsset(URobotDataContainer* RobotData, co
 
         UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
     }
+    LoadRobot(NewSavedAsset);
 }
 
 void FRobotEditorViewportClient::CreateNewRobot() {
