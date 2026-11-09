@@ -29,7 +29,7 @@ public:
 
 // Override base class functionality
 
-    void SaveActiveAsset();
+    virtual void SaveActiveAsset() override;
     virtual void Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI) override;
     virtual bool InputKey(const FInputKeyEventArgs& EventArgs) override;
 
@@ -77,7 +77,7 @@ private:
     TWeakObjectPtr<AActor> m_SpawnedPreviewActor;
     TUniquePtr<FScopedTransaction> m_ScopedDragTransaction;
 
-    const FColor c_UnselectedAnchorColor = FColor(255, 255, 255);
+    const FColor c_UnselectedAnchorColor = FColor(64, 255, 255);
     const FColor c_SelectedAnchorColor = FColor(0, 255, 64);
     const FLinearColor c_CollisionPoint = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
     const FLinearColor c_SelectedCollisionPoint = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -86,7 +86,7 @@ private:
     const int c_BoundingBoxWireThickness = 1;
     const float c_AnchorSize = 12.0f;
     const float c_SelectedAnchorSize = c_AnchorSize * 1.5;
-    const float c_GridSnap = 0.5f;
+    const double c_GridSnap = 0.5;
 
 private:
 

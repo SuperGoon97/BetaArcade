@@ -359,7 +359,19 @@ bool FPartEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisLis
         case EPartSelectionType::Anchor: {
             if (ActivePart->Anchors.IsValidIndex(m_SelectedIndex)) {
                 ActivePart->Modify();
-                ActivePart->Anchors[m_SelectedIndex].Position += Drag;
+
+                FVector CurrentPos = ActivePart->Anchors[m_SelectedIndex].Position;
+                FVector RawNewPos = CurrentPos + Drag;
+                FVector SnappedNewPos = RawNewPos;
+
+                FSnappingUtils::SnapPointToGrid(SnappedNewPos, FVector(c_GridSnap));
+
+                SnappedNewPos.X = FMath::RoundToDouble(RawNewPos.X / c_GridSnap) * c_GridSnap;
+                SnappedNewPos.Y = FMath::RoundToDouble(RawNewPos.Y / c_GridSnap) * c_GridSnap;
+                SnappedNewPos.Z = FMath::RoundToDouble(RawNewPos.Z / c_GridSnap) * c_GridSnap;
+                Drag = RawNewPos - CurrentPos;
+
+                ActivePart->Anchors[m_SelectedIndex].Position = SnappedNewPos;
                 bHandled = true;
             }
             break;
@@ -367,13 +379,18 @@ bool FPartEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisLis
         case EPartSelectionType::CollisionPoint: {
             if (ActivePart->CollisionPoints.IsValidIndex(m_SelectedIndex)) {
                 ActivePart->Modify();
-                FVector CurrentPos = ActivePart->CollisionPoints[m_SelectedIndex];
-                FVector NewPos = CurrentPos + Drag;
+                FVector CurrentPos = ActivePart->Anchors[m_SelectedIndex].Position;
+                FVector RawNewPos = CurrentPos + Drag;
+                FVector SnappedNewPos = RawNewPos;
 
-                FSnappingUtils::SnapPointToGrid(NewPos, FVector(c_GridSnap));
-                Drag = NewPos - CurrentPos;
+                FSnappingUtils::SnapPointToGrid(SnappedNewPos, FVector(c_GridSnap));
 
-                ActivePart->CollisionPoints[m_SelectedIndex] = NewPos;
+                SnappedNewPos.X = FMath::RoundToDouble(RawNewPos.X / c_GridSnap) * c_GridSnap;
+                SnappedNewPos.Y = FMath::RoundToDouble(RawNewPos.Y / c_GridSnap) * c_GridSnap;
+                SnappedNewPos.Z = FMath::RoundToDouble(RawNewPos.Z / c_GridSnap) * c_GridSnap;
+                Drag = RawNewPos - CurrentPos;
+
+                ActivePart->CollisionPoints[m_SelectedIndex] = SnappedNewPos;
                 bHandled = true;
             }
             break;
@@ -468,6 +485,9 @@ void FPartEditorViewportClient::SaveActiveAsset() {
     */
     ActivePart->PartName = CurrentName;
 
+    FString AssetGamePath = TEXT("/RobotEditor/Data/Parts");
+    FEditorUtilsViewportClient::ReloadAssetRegistryModule(AssetGamePath);
+
     /*
     If our package already exists, was not created transiently by our editor, we can save it.
     This includes packages that have the inner name of UNNAMED, as they could've been created through the content-browser instead.
@@ -496,7 +516,7 @@ void FPartEditorViewportClient::SaveActiveAsset() {
         */
         FSaveAssetDialogConfig SaveDialogConfig;
         SaveDialogConfig.DialogTitleOverride = INVTEXT("Save new Asset");
-        SaveDialogConfig.DefaultPath = TEXT("/RobotEditor/Data");
+        SaveDialogConfig.DefaultPath = AssetGamePath;
         SaveDialogConfig.DefaultAssetName = TEXT("Unnamed");
         SaveDialogConfig.AssetClassNames.Add(UPDAPart::StaticClass()->GetClassPathName());
 
@@ -506,10 +526,11 @@ void FPartEditorViewportClient::SaveActiveAsset() {
         */
         FOnObjectPathChosenForSave OnSavePressed = FOnObjectPathChosenForSave::CreateLambda([this, ActivePart](const FString& ChosenPackagePath) {
             FString CleanAssetName = FPaths::GetBaseFilename(ChosenPackagePath);
+            FString TargetFolderPath = FPaths::GetPath(ChosenPackagePath);
 
             ActivePart->Rename(*CleanAssetName, ActivePart->GetOuter());
 
-            SaveNewAsset(ActivePart, ChosenPackagePath, *CleanAssetName);
+            SaveNewAsset(ActivePart, TargetFolderPath, *CleanAssetName);
         });
 
         /*
@@ -527,12 +548,12 @@ void FPartEditorViewportClient::SaveActiveAsset() {
     A lot of the logic done here is similar to the logic done in the lambda above. We give the location, we give create the asset and we save it in the same way.
     */
     else if (CurrentPackage == GetTransientPackage()) {
-        FString TargetFolderPackagePath = TEXT("/RobotEditor/Data");
+        FString TargetFolderPackagePath = AssetGamePath;
         SaveNewAsset(ActivePart, TargetFolderPackagePath, CurrentName);
     }
 
-    if (SPartContentBrowser::m_Instance.IsValid()) {
-        SPartContentBrowser::m_Instance.Pin()->ScanPluginDirectory();
+    if (SContentBrowser::m_Instance.IsValid()) {
+        SContentBrowser::m_Instance.Pin()->ScanPluginDirectory();
     }
 }
 

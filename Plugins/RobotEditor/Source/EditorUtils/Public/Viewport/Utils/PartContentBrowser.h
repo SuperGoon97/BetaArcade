@@ -12,7 +12,6 @@ class UPDAPart;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnThumbnailClicked, UPDAPart*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnThumbnailDoubleClicked, UPDAPart*);
-DECLARE_MULTICAST_DELEGATE(FOnAddButtonPressed);
 
 typedef TSharedPtr<FAssetData> FPartAssetEntryPtr;
 
@@ -29,6 +28,7 @@ public:
     virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 
     virtual UPDAPart* GetRelatedPart();
+    virtual void OnThumbnailSelected(SThumbnailTile* Thumbnail);
 
     FOnThumbnailClicked OnThumbnailClicked;
     FOnThumbnailDoubleClicked OnThumbnailDoubleClicked;
@@ -38,12 +38,16 @@ protected:
     FAssetData m_AssetDataRecord;
     TWeakPtr<class SEditorUtilsViewport> m_AssociatedViewport;
     TSharedPtr<FAssetThumbnail> m_AssetThumbnailInstance;
+    TSharedPtr<SBorder> m_BackgroundBorder;
 
 private:
 
     bool m_MouseButtonHeld = false;
 
 };
+
+DECLARE_MULTICAST_DELEGATE(FOnAddButtonPressed);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnThumbnailSelected, SThumbnailTile*);
 
 class EDITORUTILS_API SContentBrowser : public SCompoundWidget {
 public:
@@ -59,6 +63,7 @@ public:
     static TWeakPtr<SContentBrowser> m_Instance;
 
     FOnAddButtonPressed OnAddButtonPressed;
+    FOnThumbnailSelected OnThumbnailSelected;
 
 protected:
 
