@@ -14,7 +14,7 @@ public:
     FEditorUtilsViewportClient(FPreviewScene& InPreviewScene);
     virtual ~FEditorUtilsViewportClient() override;
 
-    void SaveActiveAsset();
+    virtual void SaveActiveAsset() {};
     virtual bool InputKey(const FInputKeyEventArgs& EventArgs) override;
     virtual bool InputAxis(const FInputKeyEventArgs& EventArgs) override;
     virtual void Tick(float DeltaSeconds) override;
@@ -30,6 +30,8 @@ public:
     virtual void ConnectTileDoubleClick(SThumbnailTile* Tile) = 0;
     virtual void OnAddButtonPressed() = 0;
 
+    virtual void ReloadAssetRegistryModule(const FString& AssetGamePath);
+
 private:
 
     const float c_MinZoom = 50.0f;
@@ -40,20 +42,20 @@ private:
     float m_CameraOrbitRadius = 50.0;
     bool m_bChangeBackgroundColour = false;
     FLinearColor m_BackgroundColour = FLinearColor(0.12f, 0.14f, 0.18f, 1.0f);
-    FVector m_OrbitTargetPoint = FVector::ZeroVector;
 
 protected:
 
     TSharedPtr<IDetailsView> m_AssociatedDetailsView;
+    FVector m_OrbitTargetPoint = FVector::ZeroVector;
 
 private:
 
-    void UpdateCameraPositionFromOrbit();
     void ZoomCamera(float ZoomAmount);
     void OnInspectorPropertyChanged(const FPropertyChangedEvent& PropertyChangedEvent);
 
 protected:
 
+    void UpdateCameraPositionFromOrbit();
     AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
     TTuple<FVector, FVector> CastRayFromCameraToMouse();
 
