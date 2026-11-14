@@ -150,17 +150,40 @@ bool URobotEditorBPFL::IsPartColliding(UWorld* World, const FTransform& Transfor
     }
 
     const FVector ScaledExtent = (LocalBox.GetExtent()) * m_ShapeCastMarginMultiplier;
+    const FVector WorldCenter = Transform.TransformPosition(LocalBox.GetCenter());
     const FCollisionShape BoxShape = FCollisionShape::MakeBox(ScaledExtent);
 
     FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ShapeCastPartCollision), false);
 
     const bool bHasOverlap = World->OverlapBlockingTestByChannel(
-        Transform.GetLocation(),
+        WorldCenter,
         Transform.GetRotation(),
         ECC_Visibility,
         BoxShape,
         QueryParams
     );
+
+    const bool bDrawDebug = false;
+
+    if (bDrawDebug) {
+        const FColor DebugColor = bHasOverlap ? FColor::Green : FColor::Red;
+        const bool bPersistentLines = false;
+        const float LifeTime = 2.0f;
+        const uint8 DepthPriority = 0;
+        const float Thickness = 1.5f;
+
+        DrawDebugBox(
+            World,
+            WorldCenter,
+            ScaledExtent,
+            Transform.GetRotation(),
+            DebugColor,
+            bPersistentLines,
+            LifeTime,
+            DepthPriority,
+            Thickness
+        );
+    }
 
     return !bHasOverlap;
 }
