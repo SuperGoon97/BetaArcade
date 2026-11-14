@@ -40,6 +40,8 @@ protected:
     TSharedPtr<FAssetThumbnail> m_AssetThumbnailInstance;
     TSharedPtr<SBorder> m_BackgroundBorder;
 
+    bool m_bIsSelected = false;
+
 private:
 
     bool m_MouseButtonHeld = false;
