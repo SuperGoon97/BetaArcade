@@ -379,7 +379,7 @@ bool FPartEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisLis
         case EPartSelectionType::CollisionPoint: {
             if (ActivePart->CollisionPoints.IsValidIndex(m_SelectedIndex)) {
                 ActivePart->Modify();
-                FVector CurrentPos = ActivePart->Anchors[m_SelectedIndex].Position;
+                FVector CurrentPos = ActivePart->CollisionPoints[m_SelectedIndex];
                 FVector RawNewPos = CurrentPos + Drag;
                 FVector SnappedNewPos = RawNewPos;
 

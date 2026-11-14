@@ -153,6 +153,9 @@ AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, F
         for (UActorComponent* Component : Components) {
             if (Component) {
                 Component->SetComponentTickEnabled(false);
+                if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component)) {
+                    PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+                }
             }
         }
         return SpawnedActor;
