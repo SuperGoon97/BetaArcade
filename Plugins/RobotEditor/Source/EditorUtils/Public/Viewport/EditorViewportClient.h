@@ -54,7 +54,7 @@ private:
 protected:
 
     void UpdateCameraPositionFromOrbit();
-    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
+    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams, bool bWithCollision = false);
     TTuple<FVector, FVector> CastRayFromCameraToMouse();
 
 private:

@@ -266,7 +266,7 @@ void FRobotEditorViewportClient::SetSelectedPart(UPDAPart* PartData) {
 
     if (PartData) {
         if (PartData->Object) {
-            NewActor = FEditorUtilsViewportClient::CreateActorComponent(PartData->Object, SpawnParams);
+            NewActor = FEditorUtilsViewportClient::CreateActorComponent(PartData->Object, SpawnParams, true);
             if (NewActor) {
                 m_PreviewActor = NewActor;
                 ApplyPreviewMaterial();
@@ -371,7 +371,7 @@ void FRobotEditorViewportClient::SpawnPartInternal(UPDAPart* Part, FTransform Tr
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    AActor* NewActor = FEditorUtilsViewportClient::CreateActorComponent(Part->Object, SpawnParams);
+    AActor* NewActor = FEditorUtilsViewportClient::CreateActorComponent(Part->Object, SpawnParams, true);
     if (NewActor) {
         NewActor->SetActorTransform(Transform);
         m_Actors.Emplace(NewActor, FPartData(Part, Transform, Stats));

@@ -582,6 +582,7 @@ void FPartEditorViewportClient::SaveNewAsset(UPDAPart* ActivePart, const FString
     if (NewSavedAsset) {
         NewSavedAsset->Object = ActivePart->Object;
         NewSavedAsset->Anchors = ActivePart->Anchors;
+        NewSavedAsset->CollisionPoints = ActivePart->CollisionPoints;
         NewSavedAsset->PartName = UniqueAssetName;
 
         NewSavedAsset->MarkPackageDirty();
