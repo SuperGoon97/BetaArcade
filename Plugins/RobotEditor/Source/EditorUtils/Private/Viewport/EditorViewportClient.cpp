@@ -154,7 +154,9 @@ AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, F
             if (Component) {
                 Component->SetComponentTickEnabled(false);
                 if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component)) {
-                    PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+                    PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+                    PrimitiveComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+                    PrimitiveComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
                 }
             }
         }

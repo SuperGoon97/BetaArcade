@@ -58,7 +58,10 @@ FRobotEditorViewportClient::FRobotEditorViewportClient(FPreviewScene& InPreviewS
         PreviewScene->AddComponent(FillLight, FTransform(FillRotation));
         PreviewScene->AddComponent(SkyLight, FTransform::Identity);
 
+        m_CameraOrbitRadius = 200.0f;
         m_TargetOrbit = m_OrbitTargetPoint;
+
+        FEditorUtilsViewportClient::UpdateCameraPositionFromOrbit();
 
         if (!m_CurrentRobotData){
             CreateNewRobot();
@@ -82,6 +85,11 @@ void FRobotEditorViewportClient::Tick(float DeltaSeconds) {
         }
     }
 
+    const FModifierKeysState ModifierKeys = FSlateApplication::Get().GetModifierKeys();
+    if (!ModifierKeys.IsLeftControlDown() && m_HoveredActor) {
+        HandleObjectHighlight(nullptr);
+    }
+
     if (!bHit.bBlockingHit || !bSnapped) {
         m_bValidPlacement = false;
         UpdatePreviewActor(false);
@@ -99,6 +107,7 @@ void FRobotEditorViewportClient::Tick(float DeltaSeconds) {
         m_OrbitTargetPoint = FMath::Lerp(m_OrbitTargetPoint, m_TargetOrbit, FMath::Clamp(Alpha, 0.0f, 1.0f));
         FEditorUtilsViewportClient::UpdateCameraPositionFromOrbit();
     }
+
     FEditorUtilsViewportClient::Invalidate();
 }
 
@@ -113,8 +122,10 @@ bool FRobotEditorViewportClient::HandleObjectHighlight(AActor* Actor) {
 
         m_HoveredActor = Actor;
 
-        UMaterialInstanceDynamic* RedOverlay = CreateTransparentMaterialInstance(FLinearColor::Red, 0.8f);
-        ApplyOverlayMaterial(Actor, RedOverlay);
+        if (Actor) {
+            UMaterialInstanceDynamic* RedOverlay = CreateTransparentMaterialInstance(FLinearColor::Red, 0.8f);
+            ApplyOverlayMaterial(Actor, RedOverlay);
+        }
         bAffectedObject = true;
     } else {
         if (m_HoveredActor) {
@@ -159,7 +170,7 @@ FHitResult FRobotEditorViewportClient::GetCastHitResult() {
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(m_PreviewActor);
 
-    bool bHit = World->LineTraceSingleByChannel(HitResult, RayStart, RayEnd, ECC_Visibility, Params);
+    bool bHit = World->LineTraceSingleByChannel(HitResult, RayStart, RayEnd, ECC_GameTraceChannel1, Params);
     return HitResult;
 }
 
@@ -213,16 +224,12 @@ bool FRobotEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
         else {
             FHitResult HitResult = GetCastHitResult();
             if (HitResult.bBlockingHit && m_bValidPlacement) {
+                SetSelectedActor(nullptr);
+                UpdateDetailsView();
                 if (m_PreviewActor) {
-                    SetSelectedActor(nullptr);
-                    UpdateDetailsView();
                     CreatePartAtTransform(m_SelectedPart, m_PreviewActor->GetActorTransform());
-                    return true;
                 } else {
-                    SetSelectedActor(nullptr);
-                    UpdateDetailsView();
                     CreatePartAtTransform(m_SelectedPart, FTransform(HitResult.ImpactPoint));
-                    return true;
                 }
             }
         }
@@ -723,7 +730,8 @@ void FRobotEditorViewportClient::AddCollisionToActor(AActor* Actor) {
             BoxComponent->SetBoxExtent(BoxExtent);
             BoxComponent->SetRelativeLocation(BoxCenter);
             BoxComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-            BoxComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+            BoxComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+            BoxComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
             BoxComponent->SetVisibility(false);
 
             if (USceneComponent* RootComp = Actor->GetRootComponent()) {
@@ -767,7 +775,7 @@ void FRobotEditorViewportClient::PostRedo(bool bSuccess) {
 }
 
 void FRobotEditorViewportClient::CommitUndoState() {
-    if (!m_UndoState) {
+    if (!m_UndoState || !m_CurrentRobotData) {
         return;
     }
 

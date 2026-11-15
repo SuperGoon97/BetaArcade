@@ -158,7 +158,7 @@ bool URobotEditorBPFL::IsPartColliding(UWorld* World, const FTransform& Transfor
     const bool bHasOverlap = World->OverlapBlockingTestByChannel(
         WorldCenter,
         Transform.GetRotation(),
-        ECC_Visibility,
+        ECC_GameTraceChannel2,
         BoxShape,
         QueryParams
     );
