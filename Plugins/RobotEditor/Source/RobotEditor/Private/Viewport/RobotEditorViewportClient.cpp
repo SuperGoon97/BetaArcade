@@ -570,6 +570,9 @@ void FRobotEditorViewportClient::LoadRobot(URobotDataContainer* RobotData) {
 
         SpawnPartInternal(VisualPart, Transform, Stats);
     }
+
+    UpdateOrbitTargetPoint();
+    FRobotEditorViewportClient::Invalidate();
 }
 
 void FRobotEditorViewportClient::ClearScene() {
