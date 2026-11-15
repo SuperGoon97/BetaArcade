@@ -90,6 +90,7 @@ private:
 
 private:
 
+    void DragAndNormalizeCollisionPoints(FVector& Drag, TArray<FVector>& Points, float GridSnap);
     void TrackingStarted(const FInputEventState& InInputState, bool bIsDraggingWidget, bool bNudge) override;
     void TrackingStopped() override;
     void OnInspectorPropertyChanged(const FPropertyChangedEvent& PropertyChangedEvent);
