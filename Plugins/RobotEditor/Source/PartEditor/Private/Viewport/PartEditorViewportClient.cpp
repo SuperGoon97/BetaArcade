@@ -354,6 +354,16 @@ bool FPartEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisLis
     if (!ActivePart) return false;
 
     bool bHandled = false;
+    float GridSnap = c_GridSnap;
+
+    const FModifierKeysState ModifierKeys = FSlateApplication::Get().GetModifierKeys();
+    if (ModifierKeys.IsLeftControlDown()) {
+        GridSnap *= 10.0f;
+    } if (ModifierKeys.IsLeftAltDown()) {
+        GridSnap *= 5.0f;
+    } if (ModifierKeys.IsLeftShiftDown()) {
+        GridSnap *= 0.25f;
+    }
 
     switch(m_SelectedType) {
         case EPartSelectionType::Anchor: {
@@ -364,11 +374,11 @@ bool FPartEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisLis
                 FVector RawNewPos = CurrentPos + Drag;
                 FVector SnappedNewPos = RawNewPos;
 
-                FSnappingUtils::SnapPointToGrid(SnappedNewPos, FVector(c_GridSnap));
+                FSnappingUtils::SnapPointToGrid(SnappedNewPos, FVector(GridSnap));
 
-                SnappedNewPos.X = FMath::RoundToDouble(RawNewPos.X / c_GridSnap) * c_GridSnap;
-                SnappedNewPos.Y = FMath::RoundToDouble(RawNewPos.Y / c_GridSnap) * c_GridSnap;
-                SnappedNewPos.Z = FMath::RoundToDouble(RawNewPos.Z / c_GridSnap) * c_GridSnap;
+                SnappedNewPos.X = FMath::RoundToDouble(RawNewPos.X / GridSnap) * GridSnap;
+                SnappedNewPos.Y = FMath::RoundToDouble(RawNewPos.Y / GridSnap) * GridSnap;
+                SnappedNewPos.Z = FMath::RoundToDouble(RawNewPos.Z / GridSnap) * GridSnap;
                 Drag = RawNewPos - CurrentPos;
 
                 ActivePart->Anchors[m_SelectedIndex].Position = SnappedNewPos;
@@ -377,20 +387,12 @@ bool FPartEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisLis
             break;
         }
         case EPartSelectionType::CollisionPoint: {
-            if (ActivePart->CollisionPoints.IsValidIndex(m_SelectedIndex)) {
+            TArray<FVector>& Points = ActivePart->CollisionPoints;
+            if (Points.IsValidIndex(m_SelectedIndex)) {
                 ActivePart->Modify();
-                FVector CurrentPos = ActivePart->CollisionPoints[m_SelectedIndex];
-                FVector RawNewPos = CurrentPos + Drag;
-                FVector SnappedNewPos = RawNewPos;
 
-                FSnappingUtils::SnapPointToGrid(SnappedNewPos, FVector(c_GridSnap));
+                DragAndNormalizeCollisionPoints(Drag, Points, GridSnap);
 
-                SnappedNewPos.X = FMath::RoundToDouble(RawNewPos.X / c_GridSnap) * c_GridSnap;
-                SnappedNewPos.Y = FMath::RoundToDouble(RawNewPos.Y / c_GridSnap) * c_GridSnap;
-                SnappedNewPos.Z = FMath::RoundToDouble(RawNewPos.Z / c_GridSnap) * c_GridSnap;
-                Drag = RawNewPos - CurrentPos;
-
-                ActivePart->CollisionPoints[m_SelectedIndex] = SnappedNewPos;
                 bHandled = true;
             }
             break;
@@ -409,6 +411,82 @@ bool FPartEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisLis
     }
 
     return false;
+}
+
+void FPartEditorViewportClient::DragAndNormalizeCollisionPoints(FVector& Drag, TArray<FVector>& Points, float GridSnap) {
+    int32 MinIdx[3] = { 0, 0, 0 };
+    int32 MaxIdx[3] = { 0, 0, 0 };
+
+    for (int32 i = 1; i < Points.Num(); ++i) {
+        for (int32 Axis = 0; Axis < 3; ++Axis) {
+            FVector CurrentMinPoint = Points[MinIdx[Axis]];
+            FVector CurrentMaxPoint = Points[MaxIdx[Axis]];
+
+            /*
+             * FVectors in Unreal can be accessed through [] operators, like arrays! This is something new I learned, and it makes it easy to iterate over vectors to find the smallest / largest
+             * of a point on an axis. And that's exactly what we're doing here.
+             *
+             * MinIdx stores the INDEX of the current point.
+             * Points[i][Axis] accesses the current axis of this index. So it could be point [3] Axis [X]. And it would then compare it to the current minimum index of that same axis and determine
+             * Which is either smaller or larger, and replace the index of the current one in there.
+             *
+             * We can re-access these points through MinIdx[Axis] as this will return the index on that axis. Thanks to storing it in that way.
+             * So, to get the current point's actual position, all you have to do is Points[MinIdx[Axis]]! Which we do at the start here with some declarations to simplify things.
+             *
+             * We will re-access this later in a similar way.
+             */
+            if (Points[i][Axis] < CurrentMinPoint[Axis]) {
+                MinIdx[Axis] = i;
+            }
+            if (Points[i][Axis] > CurrentMaxPoint[Axis]) {
+                MaxIdx[Axis] = i;
+            }
+        }
+    }
+
+    FVector CurrentPos = Points[m_SelectedIndex];
+    FVector RawNewPos = CurrentPos + Drag;
+    FVector SnappedNewPos = RawNewPos;
+
+    FSnappingUtils::SnapPointToGrid(SnappedNewPos, FVector(GridSnap));
+
+    SnappedNewPos.X = FMath::RoundToDouble(RawNewPos.X / GridSnap) * GridSnap;
+    SnappedNewPos.Y = FMath::RoundToDouble(RawNewPos.Y / GridSnap) * GridSnap;
+    SnappedNewPos.Z = FMath::RoundToDouble(RawNewPos.Z / GridSnap) * GridSnap;
+    Drag = RawNewPos - CurrentPos;
+
+    Points[m_SelectedIndex] = SnappedNewPos;
+
+    /*
+     * Over each axis (X, Y, Z) we want to get the most extreme of each. Luckily, we've stored the indexes of these points inside MinIdx and MaxIdx.
+     *
+     * Therefore, if we simply call Points[MinIdx[Axis]] we get the minimum index of the point that has this axis's smallest or largest number.
+     * Then, we access the actual axis information through [Axis] on the end, which gets us the right float value from our FVector!
+     *
+     * This works the same for the maximum index, of course.
+     */
+    for (int32 Axis = 0; Axis < 3; ++Axis) {
+        double ExtremeA = Points[MinIdx[Axis]][Axis];
+        double ExtremeB = Points[MaxIdx[Axis]][Axis];
+
+
+        /*
+         * Now we want to "normalize" all of our points. This is as simple as getting the average of both points!
+         * We then make it match the grid snap (WIHOUT modifiers - Modifiers are reserved for the main dragged piece).
+         */
+        double Mid = (ExtremeA + ExtremeB) * 0.5;
+        Mid = FMath::RoundToDouble(Mid / c_GridSnap) * c_GridSnap;
+
+        /*
+         * Then we simply go over every single point, comapre indexes to ensure we're not editing self-destructively and update the position of this point's axis to the middle!
+         * This has a neat little side effect of making it impossible to move certain points off of their main axis, which is actually very deisrable behaviour!
+         */
+        for (int32 i = 0; i < Points.Num(); ++i) {
+            if (i != MinIdx[Axis] && i != MaxIdx[Axis]) {
+                Points[i][Axis] = Mid;
+            }
+        }
+    }
 }
 
 /*

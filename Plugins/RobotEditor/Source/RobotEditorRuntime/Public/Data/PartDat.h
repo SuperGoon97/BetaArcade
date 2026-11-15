@@ -33,7 +33,7 @@ public:
     FWeapon WeaponTooltip;
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Internals")
     TArray<FAnchor> Anchors;
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Internals")
     TArray<FVector> CollisionPoints;
 
 public:
