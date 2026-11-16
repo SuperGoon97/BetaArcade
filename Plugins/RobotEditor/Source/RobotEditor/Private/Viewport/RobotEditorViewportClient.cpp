@@ -12,11 +12,28 @@
 #include "Components/SkyLightComponent.h"
 #include "ContentBrowserModule.h"
 #include "IContentBrowserSingleton.h"
+#include "Structs/PartStat.h"
 #include "Structs/RobotData.h"
 #include "Data/PartDat.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/BoxComponent.h"
+#include "BPFL/RobotEditorBPFL.h"
+#include "Editor.h"
 
 FRobotEditorViewportClient::FRobotEditorViewportClient(FPreviewScene& InPreviewScene)
     : FEditorUtilsViewportClient(InPreviewScene) {
+
+        if (GEditor) {
+            GEditor->RegisterForUndo(this);
+        }
+
+        m_UndoState = TStrongObjectPtr<URobotEditorUndoState>(
+            NewObject<URobotEditorUndoState>(GetTransientPackage(), NAME_None, RF_Transactional)
+        );
+
+        EngineShowFlags.SetSelection(true);
+        EngineShowFlags.SetSelectionOutline(true);
+
         SetViewMode(VMI_Lit);
         UDirectionalLightComponent* KeyLight = NewObject<UDirectionalLightComponent>();
         KeyLight->Intensity = 3.0f;
@@ -41,7 +58,10 @@ FRobotEditorViewportClient::FRobotEditorViewportClient(FPreviewScene& InPreviewS
         PreviewScene->AddComponent(FillLight, FTransform(FillRotation));
         PreviewScene->AddComponent(SkyLight, FTransform::Identity);
 
+        m_CameraOrbitRadius = 200.0f;
         m_TargetOrbit = m_OrbitTargetPoint;
+
+        FEditorUtilsViewportClient::UpdateCameraPositionFromOrbit();
 
         if (!m_CurrentRobotData){
             CreateNewRobot();
@@ -53,196 +73,91 @@ void FRobotEditorViewportClient::Tick(float DeltaSeconds) {
     FEditorUtilsViewportClient::Tick(DeltaSeconds);
 
     FHitResult bHit = GetCastHitResult();
+    bool bSnapped = false;
     if (bHit.bBlockingHit) {
         if (bHit.GetActor()) {
-            UpdatePreviewActor(true);
-
-            if (m_PreviewActor) {
-                m_PreviewActor->SetActorLocationAndRotation(bHit.ImpactPoint, FRotator::ZeroRotator);
+            if (HandleObjectHighlight(bHit.GetActor())) {
+                bSnapped = false;
             }
-
-            SnapToNearestAnchor(bHit, m_PreviewActor);
+            else if (HandleObjectSnapping(bHit)) {
+                bSnapped = true;
+            }
         }
-    } else {
+    }
+
+    const FModifierKeysState ModifierKeys = FSlateApplication::Get().GetModifierKeys();
+    if (!ModifierKeys.IsLeftControlDown() && m_HoveredActor) {
+        HandleObjectHighlight(nullptr);
+    }
+
+    if (!bHit.bBlockingHit || !bSnapped) {
+        m_bValidPlacement = false;
         UpdatePreviewActor(false);
         MovePreviewActorToLocation(bHit.TraceEnd);
     }
+
+    /* Update the camera's position until it is close enough to the target orbit point with a total tolerance of 0.01f
+     * Currently a magic number.
+     *
+     * TODO : Remove magic numbers for constants.
+     */
 
     if (!FVector::PointsAreNear(m_TargetOrbit, m_OrbitTargetPoint, 0.01f)) {
         float Alpha = 5.0f * DeltaSeconds;
         m_OrbitTargetPoint = FMath::Lerp(m_OrbitTargetPoint, m_TargetOrbit, FMath::Clamp(Alpha, 0.0f, 1.0f));
         FEditorUtilsViewportClient::UpdateCameraPositionFromOrbit();
     }
+
     FEditorUtilsViewportClient::Invalidate();
 }
 
-TTuple<const FPartData& /*HitData*/, int /*HitID*/, int /*PreviewID*/> FRobotEditorViewportClient::SnapToNearestAnchor(const FHitResult& HitResult, AActor* SnapActor) {
-    if (!HitResult.bBlockingHit || !SnapActor) {
-        return MakeTuple(FPartData(), INDEX_NONE, INDEX_NONE);
-    }
+bool FRobotEditorViewportClient::HandleObjectHighlight(AActor* Actor) {
+    bool bAffectedObject = false;
+    const FModifierKeysState ModifierKeys = FSlateApplication::Get().GetModifierKeys();
 
-    AActor* HitActor = HitResult.GetActor();
-    const FPartData& HitData = GetPartDataFromActor(HitActor);
-
-    if (!HitData.Part || !m_SelectedPart || HitData.Part->Anchors.Num() == 0 || m_SelectedPart->Anchors.Num() == 0) {
-        return MakeTuple(FPartData(), INDEX_NONE, INDEX_NONE);
-    }
-
-    /*
-     * Our first iteration. In this loop, we find the closest anchor to the impact position of the ray.
-     * We then store a copy of the anchor to perform some transforms on.
-     */
-
-    FTransform HitTransform = HitActor->GetActorTransform();
-
-    FAnchor TargetHitAnchor;
-    FVector ClosestAnchorWorldPos = FVector::ZeroVector;
-    float ClosestDistanceSq = MAX_FLT;
-    int TargetAnchorIndex = INDEX_NONE;
-    int CurrentIndex = 0;
-
-    for (const FAnchor& Anchor : HitData.Part->Anchors) {
-        FVector AnchorWorldPos = HitTransform.TransformPosition(Anchor.Position);
-        float DistanceSq = FVector::DistSquared(AnchorWorldPos, HitResult.ImpactPoint);
-
-        if (DistanceSq < ClosestDistanceSq) {
-            ClosestAnchorWorldPos = AnchorWorldPos;
-            TargetAnchorIndex = CurrentIndex;
-            ClosestDistanceSq = DistanceSq;
-            TargetHitAnchor = Anchor;
+    if (ModifierKeys.IsLeftControlDown()) {
+        if (m_HoveredActor) {
+            ClearOverlayMaterial(m_HoveredActor);
         }
-        CurrentIndex++;
-    }
 
-    /*
-     * If there isn't an anchor within a relatively normal set distance, (in this case we'll use the imaginary numer Infinity as our test point), then there's nothing to snap to.
-     */
+        m_HoveredActor = Actor;
 
-    if (ClosestDistanceSq > MAX_FLT) {
-        return MakeTuple(FPartData(), INDEX_NONE, INDEX_NONE);
-    }
-
-    /*
-     * We need to get the normal of the anchor based on the transform of the actor that we're reading from. We just simply call GetSafeNormal(); A fun little function that already exists inside Unreal.
-     * But that's not all, we also need to find the target snap. This acts as the "opposite" of the hit anchor normal, so it ensures that the anchor that you get always has a normal facing INTO it,
-     * rather than away from.
-     */
-
-    FVector HitAnchorNormalWorld = HitTransform.TransformVector(TargetHitAnchor.Position.GetSafeNormal()).GetSafeNormal();
-    FVector TargetSnapNormalWorld = -HitAnchorNormalWorld;
-
-    /*
-     * Now we score differently here, because the object can be drastically different depending on where you're colliding. We need to factor in a few things here.
-     * 1) Orientation of the object:
-     *
-     *  An object might be a cylinder, as opposed to a cube. This cylinder may be harder to calculate distances from if they're equidistant from the center.
-     *
-     * 2) The dot product of the normals
-     *
-     *  A normal might have a greater or lesser dot-product depending on where it is on the object.
-     *
-     * 3) The position of the anchors relative to the object.
-     *
-     * Combining these three rules gets us a total score that allows us to closer choose an anchor.
-     */
-
-    FTransform SnapTransform = SnapActor->GetActorTransform();
-    FAnchor SnapAnchor;
-    int TargetSnapAnchorIndex = INDEX_NONE;
-    CurrentIndex = 0;
-
-    float BestAnchorScore = -MAX_FLT;
-
-    for (const FAnchor& Anchor : m_SelectedPart->Anchors) {
-        FVector LocalNormal = Anchor.Position.IsNearlyZero() ? -FVector::UpVector : Anchor.Position.GetSafeNormal();
-
-        FVector AnchorNormalWorld = SnapTransform.TransformVector(LocalNormal).GetSafeNormal();
-        float DirectionScore = FVector::DotProduct(AnchorNormalWorld, TargetSnapNormalWorld);
-
-        FVector AnchorWorldPos = SnapTransform.TransformPosition(Anchor.Position);
-        float DistanceSq = FVector::DistSquared(AnchorWorldPos, ClosestAnchorWorldPos);
-        float ProximityScore = -(DistanceSq / 10000.0f);
-
-        float TotalScore = DirectionScore + ProximityScore;
-
-        if (TotalScore > BestAnchorScore) {
-            TargetSnapAnchorIndex = CurrentIndex;
-            BestAnchorScore = TotalScore;
-            SnapAnchor = Anchor;
+        if (Actor) {
+            UMaterialInstanceDynamic* RedOverlay = CreateTransparentMaterialInstance(FLinearColor::Red, 0.8f);
+            ApplyOverlayMaterial(Actor, RedOverlay);
         }
-        CurrentIndex++;
+        bAffectedObject = true;
+    } else {
+        if (m_HoveredActor) {
+            ClearOverlayMaterial(m_HoveredActor);
+            m_HoveredActor = nullptr;
+            bAffectedObject = true;
+        }
     }
-
-    /*
-     * Long, Boring and indescribable maths up ahead. This required Quarternions, Dot Products and Vector Transforms. I never want to touch maths ever again.
-     * Nevertheless, time to explain how this works.
-     *
-     * Below, we declare LocalNormal and WorldNormals. LocalNormal determines that if an Anchor's position is nearly 0, 0, 0, we prevent a divide by 0 issue and declare that the anchor is pointing
-     * upwards through an arbitrary rule. This should only affect anchors that are not correctly put in place.
-     *
-     * We then calculate the actual normal based on the transform in the world, and turn it into a value between -1.0 and 1.0 for our necessary transformations.
-     */
-    FVector LocalNormal = SnapAnchor.Position.IsNearlyZero() ? -FVector::UpVector : SnapAnchor.Position.GetSafeNormal();
-    FVector SnapAnchorNormalWorld = SnapTransform.TransformVector(LocalNormal).GetSafeNormal();
-
-    /*
-     * We want our objects to handle rotations. For example, should you be hovering over the side of a six-sided cube and have an object with a single anchor point, this will align the points together.
-     * Thankfully, Unreal has a bunch of useful Quarternion functions inside their actual Quarternion data, so we just need to find the shortest safe angular rotation to get us to our desired point.
-     * That's what this lovely FindBetweenNormals function does, it finds the shortest angular path to a point.
-     */
-
-    FQuat AlignmentRotation = FQuat::FindBetweenNormals(SnapAnchorNormalWorld, TargetSnapNormalWorld);
-    FQuat FinalRotation = AlignmentRotation * SnapTransform.GetRotation();
-
-    // /*
-    //  * Here we handle user-input-based rotation. When the user presses either Q or E, the m_CurrentRotationInputSteps will increment or decrement with a % of 4, ensuring that it will always wrap around
-    //  * between 0 -> 3.
-    //  *
-    //  * We then multiply our current rotation input steps by the amount we actually want an object to rotate, in this case we just want snapping every 90 degrees or so, so we can do so here.
-    //  * (I also did this during Advanced Development Techniques, through `(TAU * 4)) * rotation_num`. So this is a fun useful little tidbit for rotation snapping!)
-    //  *
-    //  * We then apply this rotation after the previous one. (Quarternion multiplication is different to actual multiplication. Consider it adding angles sequentially rather than multiplying the
-    //  * values directly.)
-    //  */
-
-    float AngleOffset = m_CurrentRotationNum * 90.0f;
-    FQuat AxisStepRotation = FQuat(TargetSnapNormalWorld, FMath::DegreesToRadians(AngleOffset));
-    FinalRotation = AxisStepRotation * FinalRotation;
-
-    /*
-     * We then rotate our anchor vector by this final quarternion rotation, and can set our location relative to all of the maths that we just performed to find the optimal place to put the damn thing.
-     */
-    FVector RotatedSnapLocalAnchor = FinalRotation.RotateVector(SnapAnchor.Position);
-    FVector FinalWorldLocation = ClosestAnchorWorldPos - RotatedSnapLocalAnchor;
-
-    /*
-     * Then all we need to do is set the location and the rotation, and the snapping is complete.
-     */
-
-    SnapActor->SetActorLocationAndRotation(FinalWorldLocation, FinalRotation);
-
     FEditorUtilsViewportClient::Invalidate();
-    return MakeTuple(HitData, TargetAnchorIndex, TargetSnapAnchorIndex);
+    return bAffectedObject;
 }
 
-void FRobotEditorViewportClient::CreatePartFromPreview() {
-    if (!m_PreviewActor || !m_SelectedPart) {
-        return;
+bool FRobotEditorViewportClient::HandleObjectSnapping(const FHitResult& bHit) {
+    UpdatePreviewActor(true);
+    bool bSnapped = false;
+
+    /*
+     * Try to snap the object to the nearest other object. If you cannot, simply deal with UpdatePreviewActor()
+     */
+
+    UPDAPart* HitPart = GetPartDataFromActor(bHit.GetActor()).Part.Get();
+    FSnapResult SnapResult = URobotEditorBPFL::GetSnapResult(bHit.ImpactPoint, bHit.GetActor(), HitPart, m_SelectedPart, m_CurrentRotationNum);
+    if (SnapResult.bCanSnap) {
+        FTransform SnapTransform = SnapResult.SnapTransform;
+        if (URobotEditorBPFL::IsPartColliding(PreviewScene->GetWorld(), SnapTransform, m_SelectedPart)) {
+            m_PreviewActor->SetActorTransform(SnapTransform);
+            m_bValidPlacement = true;
+            bSnapped = true;
+        }
     }
-
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    FTransform SpawnTransform = m_PreviewActor->GetActorTransform();
-    AActor* NewActor = FEditorUtilsViewportClient::CreateActorComponent(m_SelectedPart->Object, SpawnParams);
-
-    if (NewActor) {
-        NewActor->SetActorTransform(SpawnTransform);
-        m_Actors.Emplace(NewActor, FPartData(m_SelectedPart, SpawnTransform, {}));
-    }
-
-    UpdateOrbitTargetPoint();
     FEditorUtilsViewportClient::Invalidate();
+    return bSnapped;
 }
 
 FHitResult FRobotEditorViewportClient::GetCastHitResult() {
@@ -255,7 +170,7 @@ FHitResult FRobotEditorViewportClient::GetCastHitResult() {
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(m_PreviewActor);
 
-    bool bHit = World->LineTraceSingleByChannel(HitResult, RayStart, RayEnd, ECC_Visibility, Params);
+    bool bHit = World->LineTraceSingleByChannel(HitResult, RayStart, RayEnd, ECC_GameTraceChannel1, Params);
     return HitResult;
 }
 
@@ -279,38 +194,48 @@ bool FRobotEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs) {
             if (HitResult.bBlockingHit) {
                 AActor* HitActor = HitResult.GetActor();
                 if (HitActor && m_Actors.Find(HitActor)) {
-                    m_Actors.Remove(HitActor);
-                    HitActor->Destroy();
+                    DestroyActor(HitActor);
                 }
             }
-            UpdateOrbitTargetPoint();
             return true;
         }
 
-        if (!m_SelectedPart) { return true; }
+        if (!m_SelectedPart) {
+            /*
+             * If we have no part selected, we want to just select any parts that exist in the world. This includes selecting no part so that we can properly deselect.
+             * I'll include another hotkey for deselection
+             *
+             * TODO : Include that hotkey.
+             */
+            FHitResult HitResult = GetCastHitResult();
+            AActor* HitActor = HitResult.GetActor();
+            SetSelectedActor(HitActor);
+            return true;
+        }
         /*
          *   If there isn't a part displayed on the screen, place immediately at 0, 0, 0. If there is a part on the screen, perform a cast and ensure that the cast is hitting something.
          *   If it isn't, pass this down thorugh FEditorUtilsViewportClient::InputKey(EventArgs);
          */
         if (m_Actors.Num() == 0) {
+            SetSelectedActor(nullptr);
+            UpdateDetailsView();
             CreatePartAtTransform(m_SelectedPart, FTransform::Identity);
         }
         else {
             FHitResult HitResult = GetCastHitResult();
-            if (HitResult.bBlockingHit) {
+            if (HitResult.bBlockingHit && m_bValidPlacement) {
+                SetSelectedActor(nullptr);
+                UpdateDetailsView();
                 if (m_PreviewActor) {
-                    CreatePartFromPreview();
+                    CreatePartAtTransform(m_SelectedPart, m_PreviewActor->GetActorTransform());
                 } else {
                     CreatePartAtTransform(m_SelectedPart, FTransform(HitResult.ImpactPoint));
                 }
             }
         }
 
-         return true;
+        return true;
     }
-
-
-
     return FEditorUtilsViewportClient::InputKey(EventArgs);
 }
 
@@ -322,6 +247,12 @@ void FRobotEditorViewportClient::SetSelectedPart(UPDAPart* PartData) {
     UWorld* PreviewWorld = PreviewScene->GetWorld();
     if (!PreviewWorld) return;
 
+    if (PartData == m_SelectedPart) {
+        m_SelectedPart = nullptr;
+        m_PreviewActor->Destroy();
+        m_PreviewActor->Reset();
+        return;
+    }
     m_SelectedPart = PartData;
 
     if (m_PreviewActor) {
@@ -335,7 +266,7 @@ void FRobotEditorViewportClient::SetSelectedPart(UPDAPart* PartData) {
 
     if (PartData) {
         if (PartData->Object) {
-            NewActor = FEditorUtilsViewportClient::CreateActorComponent(PartData->Object, SpawnParams);
+            NewActor = FEditorUtilsViewportClient::CreateActorComponent(PartData->Object, SpawnParams, true);
             if (NewActor) {
                 m_PreviewActor = NewActor;
                 ApplyPreviewMaterial();
@@ -343,6 +274,39 @@ void FRobotEditorViewportClient::SetSelectedPart(UPDAPart* PartData) {
         }
     }
     FEditorUtilsViewportClient::Invalidate();
+}
+
+void FRobotEditorViewportClient::SetSelectedActor(AActor* Actor) {
+    if (m_SelectedActor && m_SelectedActor != Actor) {
+        TArray<UMeshComponent*> MeshComps;
+        m_SelectedActor->GetComponents<UMeshComponent>(MeshComps);
+
+        for (UMeshComponent* MeshComp : MeshComps) {
+            if (!MeshComp) continue;
+            MeshComp->SelectionOverrideDelegate.Unbind();
+        }
+        m_SelectedActor->PushSelectionToProxies();
+    }
+
+     m_SelectedActor = Actor;
+
+    if (Actor) {
+        TArray<UMeshComponent*> MeshComps;
+        Actor->GetComponents<UMeshComponent>(MeshComps);
+
+        for (UMeshComponent* MeshComp : MeshComps) {
+            if (!MeshComp) continue;
+            MeshComp->SelectionOverrideDelegate = UPrimitiveComponent::FSelectionOverride::CreateLambda(
+                [this](const UPrimitiveComponent* Comp) -> bool
+                {
+                    return Comp && Comp->GetOwner() == m_SelectedActor;
+                });
+        }
+        m_SelectedActor->PushSelectionToProxies();
+    }
+    UpdateDetailsView();
+    FEditorUtilsViewportClient::Invalidate();
+    return;
 }
 
 void FRobotEditorViewportClient::UpdatePreviewActor(bool ShouldShow) {
@@ -363,24 +327,56 @@ void FRobotEditorViewportClient::MovePreviewActorToLocation(FVector Location) {
     return;
 }
 
-void FRobotEditorViewportClient::CreatePartAtTransform(UPDAPart* Part, FTransform Transform) {
-    if (!Part) { return; }
-
-    if (Part->Object) {
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-        AActor* NewActor = FEditorUtilsViewportClient::CreateActorComponent(Part->Object, SpawnParams);
-        NewActor->SetActorTransform(Transform);
-
-        if (NewActor) {
-            m_Actors.Emplace(NewActor, FPartData(Part, Transform, {}));
-        }
+void FRobotEditorViewportClient::DestroyActor(AActor* Actor) {
+    if (!Actor) {
+        return;
     }
+
+    const FScopedTransaction Transaction(NSLOCTEXT("RobotEditor", "DeletePart", "Remove Robot Part"));
+    CommitUndoState();
+
+    SetSelectedActor(nullptr);
+    UpdateDetailsView();
+    m_Actors.Remove(Actor);
+    Actor->Destroy();
+
+    CommitUndoState();
+
+    UpdateOrbitTargetPoint();
+    FEditorUtilsViewportClient::Invalidate();
+}
+
+void FRobotEditorViewportClient::CreatePartAtTransform(UPDAPart* Part, FTransform Transform, const TMap<FName, FPartStat>& Stats) {
+    if (!Part || !Part->Object) {
+        return;
+    }
+
+    const FScopedTransaction Transaction(NSLOCTEXT("RobotEditor", "CreatePart", "Add Part To Robot"));
+    CommitUndoState();
+
+    SpawnPartInternal(Part, Transform, Stats);
+
+    CommitUndoState();
 
     UpdateOrbitTargetPoint();
     FEditorUtilsViewportClient::Invalidate();
     return;
+}
+
+void FRobotEditorViewportClient::SpawnPartInternal(UPDAPart* Part, FTransform Transform, const TMap<FName, FPartStat>& Stats) {
+    if (!Part || !Part->Object) {
+        return;
+    }
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    AActor* NewActor = FEditorUtilsViewportClient::CreateActorComponent(Part->Object, SpawnParams, true);
+    if (NewActor) {
+        NewActor->SetActorTransform(Transform);
+        m_Actors.Emplace(NewActor, FPartData(Part, Transform, Stats));
+        AddCollisionToActor(NewActor);
+    }
 }
 
 void FRobotEditorViewportClient::SetSelectedActorsData(const FPartData& PartData) {
@@ -429,6 +425,8 @@ void FRobotEditorViewportClient::SaveActiveAsset() {
     if (!m_CurrentRobotData || m_Actors.IsEmpty()) {
         return;
     }
+
+    SetSelectedActor(nullptr);
 
     URobotDataContainer* Data = m_CurrentRobotData;
     TArray<FPartData> PartData;
@@ -530,6 +528,7 @@ void FRobotEditorViewportClient::SaveNewAsset(URobotDataContainer* RobotData, co
 }
 
 void FRobotEditorViewportClient::CreateNewRobot() {
+    SetSelectedActor(nullptr);
     if (m_CurrentRobotData) {
 
         /*
@@ -548,6 +547,12 @@ void FRobotEditorViewportClient::CreateNewRobot() {
 }
 
 void FRobotEditorViewportClient::LoadRobot(URobotDataContainer* RobotData) {
+    if (GEditor) {
+        GEditor->ResetTransaction(NSLOCTEXT("RobotEditor", "ResetUndo", "Clear History"));
+    }
+
+    SetSelectedActor(nullptr);
+
     if (m_CurrentRobotData) {
         ClearScene();
     }
@@ -561,12 +566,17 @@ void FRobotEditorViewportClient::LoadRobot(URobotDataContainer* RobotData) {
     for (const FPartData& Part : RobotData->RobotParts.Parts) {
         UPDAPart* VisualPart = Part.Part.Get();
         FTransform Transform = Part.RelativeTransform;
+        TMap<FName, FPartStat> Stats = Part.PartStats;
 
-        CreatePartAtTransform(VisualPart, Transform);
+        SpawnPartInternal(VisualPart, Transform, Stats);
     }
+
+    UpdateOrbitTargetPoint();
+    FRobotEditorViewportClient::Invalidate();
 }
 
 void FRobotEditorViewportClient::ClearScene() {
+    SetSelectedActor(nullptr);
     for (const TPair<AActor*, FPartData>& KVPair : m_Actors) {
         KVPair.Key->Destroy();
     }
@@ -591,34 +601,35 @@ FVector FRobotEditorViewportClient::GetCenterOfMass() {
     return TotalPositions / TotalParts;
 }
 
-void FRobotEditorViewportClient::ApplyPreviewMaterial() {
-    if (!m_PreviewActor) {
-        return;
-    }
-
+UMaterialInstanceDynamic* FRobotEditorViewportClient::CreateTransparentMaterialInstance(const FLinearColor& Color, float Opacity) {
     UMaterialInterface* BaseMaterial = Cast<UMaterialInterface>(StaticLoadObject(
         UMaterialInterface::StaticClass(),
         nullptr,
         TEXT("/RobotEditor/Materials/M_RobotPreview.M_RobotPreview")
     ));
 
-    /*
-     * Double validation, try to fall-back to a different type of material before completely failing altogether.
-     */
-
     if (!BaseMaterial) {
         BaseMaterial = GEngine->WireframeMaterial;
     } if (!BaseMaterial) {
-        return;
+        return nullptr;
     }
 
     UMaterialInstanceDynamic* DynamicMaterial = UMaterialInstanceDynamic::Create(BaseMaterial, m_PreviewActor);
     if (!DynamicMaterial) {
+        return nullptr;
+    }
+
+    DynamicMaterial->SetVectorParameterValue(FName("Color"), Color);
+    DynamicMaterial->SetScalarParameterValue(FName("Opacity"), Opacity);
+    return DynamicMaterial;
+}
+
+void FRobotEditorViewportClient::ApplyPreviewMaterial() {
+    if (!m_PreviewActor) {
         return;
     }
 
-    DynamicMaterial->SetVectorParameterValue(FName("Color"), FLinearColor::Green);
-    DynamicMaterial->SetScalarParameterValue(FName("Opacity"), 0.3f);
+    UMaterialInstanceDynamic* DynamicMaterial = CreateTransparentMaterialInstance(FLinearColor::Green, 0.3f);
 
     TInlineComponentArray<UStaticMeshComponent*> MeshComponents;
     m_PreviewActor->GetComponents(MeshComponents);
@@ -639,4 +650,148 @@ void FRobotEditorViewportClient::ApplyPreviewMaterial() {
             MeshComp->SetMaterial(i, DynamicMaterial);
         }
     }
+}
+
+void FRobotEditorViewportClient::ApplyOverlayMaterial(AActor* Actor, UMaterialInstanceDynamic* Material) {
+    if (!Actor || !Material) { return; }
+
+    TInlineComponentArray<UStaticMeshComponent*> MeshComponents;
+    Actor->GetComponents(MeshComponents);
+
+    for (UStaticMeshComponent* MeshComp : MeshComponents) {
+        if (!MeshComp) {
+            continue;
+        }
+        MeshComp->SetOverlayMaterial(Material);
+    }
+    return;
+}
+
+void FRobotEditorViewportClient::ClearOverlayMaterial(AActor* Actor) {
+    if (!Actor) { return; }
+
+    TInlineComponentArray<UStaticMeshComponent*> MeshComponents;
+    Actor->GetComponents(MeshComponents);
+
+    for (UStaticMeshComponent* MeshComp : MeshComponents) {
+        if (!MeshComp) {
+            continue;
+        }
+        MeshComp->SetOverlayMaterial(nullptr);
+    }
+    return;
+}
+
+void FRobotEditorViewportClient::SetDetailsView(TSharedPtr<IStructureDetailsView> DetailsView) {
+    m_DetailsView = DetailsView;
+
+    TSharedPtr<SWidget> DetailsWidget = m_DetailsView->GetWidget();
+
+    if (DetailsWidget.IsValid()) {
+        DetailsWidget->SetVisibility(EVisibility::Collapsed);
+    }
+}
+
+void FRobotEditorViewportClient::UpdateDetailsView() {
+    if (!m_DetailsView) {
+        return;
+    }
+
+    TSharedPtr<SWidget> DetailsWidget = m_DetailsView->GetWidget();
+
+    if (!m_SelectedActor) {
+        m_ScopedStruct.Reset();
+        m_DetailsView->SetStructureData(nullptr);
+        if (DetailsWidget.IsValid()) {
+            DetailsWidget->SetVisibility(EVisibility::Collapsed);
+        }
+    }
+    else {
+        m_ScopedStruct = MakeShared<FStructOnScope>(
+            FPartData::StaticStruct(),
+            reinterpret_cast<uint8*>(&m_Actors[m_SelectedActor])
+        );
+        m_ScopedStruct->SetPackage(m_CurrentRobotData->GetOutermost());
+        m_DetailsView->SetStructureData(m_ScopedStruct);
+
+        if (DetailsWidget.IsValid()) {
+            DetailsWidget->SetVisibility(EVisibility::Visible);
+        }
+    }
+}
+
+void FRobotEditorViewportClient::AddCollisionToActor(AActor* Actor) {
+    if (Actor) {
+        UBoxComponent* BoxComponent = NewObject<UBoxComponent>(Actor, TEXT("Box Component"));
+        UPDAPart* PartData = GetPartDataFromActor(Actor).Part.Get();
+        FBox BoundingBox = PartData->GetBoundingBox();
+
+        FVector BoxExtent = BoundingBox.GetExtent();
+        FVector BoxCenter = BoundingBox.GetCenter();
+
+        if (BoxComponent) {
+            BoxComponent->SetBoxExtent(BoxExtent);
+            BoxComponent->SetRelativeLocation(BoxCenter);
+            BoxComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+            BoxComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+            BoxComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
+            BoxComponent->SetVisibility(false);
+
+            if (USceneComponent* RootComp = Actor->GetRootComponent()) {
+                BoxComponent->SetupAttachment(RootComp);
+            } else {
+                Actor->SetRootComponent(BoxComponent);
+            }
+
+            BoxComponent->RegisterComponent();
+            Actor->AddInstanceComponent(BoxComponent);
+
+        }
+    }
+}
+
+void FRobotEditorViewportClient::PostUndo(bool bSuccess) {
+    if (!bSuccess || !m_UndoState.IsValid()) {
+        return;
+    }
+
+    SetSelectedActor(nullptr);
+
+    for (const auto& Pair : m_Actors) {
+        if (Pair.Key) {
+            Pair.Key->Destroy();
+        }
+    }
+    m_Actors.Empty();
+
+    for (const FPartData& Data : m_UndoState->PartSnapshot) {
+        SpawnPartInternal(Data.Part.Get(), Data.RelativeTransform, Data.PartStats);
+    }
+
+    UpdateDetailsView();
+    UpdateOrbitTargetPoint();
+    FEditorUtilsViewportClient::Invalidate();
+}
+
+void FRobotEditorViewportClient::PostRedo(bool bSuccess) {
+    PostUndo(bSuccess);
+}
+
+void FRobotEditorViewportClient::CommitUndoState() {
+    if (!m_UndoState || !m_CurrentRobotData) {
+        return;
+    }
+
+    m_UndoState->Modify();
+    m_UndoState->PartSnapshot.Reset(m_Actors.Num());
+
+    for (const TPair<AActor*, FPartData>& Pair : m_Actors) {
+        FPartData PartSnapshot = Pair.Value;
+        if (Pair.Key) {
+            PartSnapshot.RelativeTransform = Pair.Key->GetActorTransform();
+        }
+        m_UndoState->PartSnapshot.Add(PartSnapshot);
+    }
+
+    m_CurrentRobotData->MarkPackageDirty();
 }

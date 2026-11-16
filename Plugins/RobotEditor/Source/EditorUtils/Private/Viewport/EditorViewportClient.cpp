@@ -140,7 +140,7 @@ void FEditorUtilsViewportClient::ZoomCamera(float ZoomAmount) {
     Invalidate();
 }
 
-AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams) {
+AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams, bool bWithCollision) {
     if (!InObject || !InObject->GeneratedClass) { return nullptr; }
     UWorld* PreviewWorld = PreviewScene->GetWorld();
     if (UClass* ActorClass = InObject->GeneratedClass) {
@@ -153,6 +153,13 @@ AActor* FEditorUtilsViewportClient::CreateActorComponent(UBlueprint* InObject, F
         for (UActorComponent* Component : Components) {
             if (Component) {
                 Component->SetComponentTickEnabled(false);
+                if (bWithCollision) {
+                    if (UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(Component)) {
+                        PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+                        PrimitiveComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+                        PrimitiveComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
+                    }
+                }
             }
         }
         return SpawnedActor;

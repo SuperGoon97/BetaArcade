@@ -32,7 +32,7 @@ public:
 
     virtual void ReloadAssetRegistryModule(const FString& AssetGamePath);
 
-private:
+protected:
 
     const float c_MinZoom = 50.0f;
     const float c_MaxZoom = 5000.0f;
@@ -42,8 +42,6 @@ private:
     float m_CameraOrbitRadius = 50.0;
     bool m_bChangeBackgroundColour = false;
     FLinearColor m_BackgroundColour = FLinearColor(0.12f, 0.14f, 0.18f, 1.0f);
-
-protected:
 
     TSharedPtr<IDetailsView> m_AssociatedDetailsView;
     FVector m_OrbitTargetPoint = FVector::ZeroVector;
@@ -56,7 +54,7 @@ private:
 protected:
 
     void UpdateCameraPositionFromOrbit();
-    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams);
+    AActor* CreateActorComponent(UBlueprint* InObject, FActorSpawnParameters& SpawnParams, bool bWithCollision = false);
     TTuple<FVector, FVector> CastRayFromCameraToMouse();
 
 private:

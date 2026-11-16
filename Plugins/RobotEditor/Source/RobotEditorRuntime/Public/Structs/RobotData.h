@@ -14,17 +14,17 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Save Data")
     FTransform RelativeTransform;
     UPROPERTY(BlueprintReadWrite,  EditAnywhere, Category = "Part Data")
-    TMap<FName, float> DataFloatMap;
+    TMap<FName, FPartStat> PartStats;
 
     FPartData()
         : Part(nullptr)
         , RelativeTransform(FTransform::Identity)
     {}
 
-    FPartData(TSoftObjectPtr<UPDAPart> AssetPtr, const FTransform& InTransform, const TMap<FName, float>& InModifiers)
+    FPartData(TSoftObjectPtr<UPDAPart> AssetPtr, const FTransform& InTransform, const TMap<FName, FPartStat>& InModifiers)
         : Part(AssetPtr)
         , RelativeTransform(InTransform)
-        , DataFloatMap(InModifiers)
+        , PartStats(InModifiers)
     {}
 };
 

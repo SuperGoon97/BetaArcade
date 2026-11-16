@@ -182,10 +182,12 @@ void SThumbnailTile::OnThumbnailSelected(SThumbnailTile* Thumbnail) {
     if (!m_BackgroundBorder.IsValid()) {
         return;
     }
-    else if (Thumbnail == this) {
+    else if (Thumbnail == this && !m_bIsSelected) {
         m_BackgroundBorder->SetBorderImage(FAppStyle::Get().GetBrush("Brushes.Select"));
+        m_bIsSelected = true;
     } else {
         m_BackgroundBorder->SetBorderImage(FAppStyle::Get().GetBrush("Brushes.Panel"));
+        m_bIsSelected = false;
     }
     return;
 }
